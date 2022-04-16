@@ -1,0 +1,1230 @@
+:PROPERTIES:
+:ID:       ad8dcc7e-9604-49f1-9a85-fa92927d8641
+:END:
+#+title: Config
+#+startup: fold
+#+property: header-args:emacs-lisp :tangle yes :comments no
+
+* ⚓ File Headers
+:PROPERTIES:
+:HASH:     441763128488135351
+:MODIFIED: [2022-04-11 05:35]
+:END:
+** Config header
+:PROPERTIES:
+:HASH:     1114414998440020705
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
+#+end_src
+
+** Packages header
+:PROPERTIES:
+:HASH:     1286736839456628843
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp :tangle packages.el
+;; -*- no-byte-compile: t; -*-
+;;; $DOOMDIR/packages.el
+#+end_src
+
+** Init header
+:PROPERTIES:
+:HASH:     1542119455530109817
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp :tangle init.el
+;;; init.el -*- lexical-binding: t; -*-
+#+end_src
+
+
+* 📝 Instructions and Cheetsheet
+:PROPERTIES:
+:HASH:     -1264432288792410199
+:MODIFIED: [2022-04-11 05:35]
+:END:
+** Config
+:PROPERTIES:
+:HASH:     1214040490147371975
+:MODIFIED: [2022-04-11 05:35]
+:END:
+You don't need to run ~doom sync~ after modifying [[config.el]]
+#+begin_src emacs-lisp :tangle no
+;; Whenever you reconfigure a package, make sure to wrap your config in an
+;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
+;;
+;;   (after! PACKAGE
+;;     (setq x y))
+;;
+;; The exceptions to this rule:
+;;
+;;   - Setting file/directory variables (like `org-directory')
+;;   - Setting variables which explicitly tell you to set them before their
+;;     package is loaded (see 'C-h v VARIABLE' to look up their documentation).
+;;   - Setting doom variables (which start with 'doom-' or '+').
+;;
+;; Here are some additional functions/macros that will help you configure Doom.
+;;
+;; - `load!' for loading external *.el files relative to this one
+;; - `use-package!' for configuring packages
+;; - `after!' for running code after a package has loaded
+;; - `add-load-path!' for adding directories to the `load-path', relative to
+;;   this file. Emacs searches the `load-path' when you load packages with
+;;   `require' or `use-package'.
+;; - `map!' for binding new keys
+;;
+;; To get information about any of these functions/macros, move the cursor over
+;; the highlighted symbol at press 'K' (non-evil users must press 'C-c c k').
+;; This will open documentation for it, including demos of how they are used.
+;; Alternatively, use `C-h o' to look up a symbol (functions, variables, faces,
+;; etc).
+;;
+;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
+;; they are implemented.
+#+end_src
+
+** Packages
+:PROPERTIES:
+:HASH:     -1413535835601817284
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp :tangle no
+;; To install a package with Doom you must declare them here and run 'doom sync'
+;; on the command line, then restart Emacs for the changes to take effect -- or
+;; use 'M-x doom/reload'.
+
+
+;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
+;(package! some-package)
+
+;; To install a package directly from a remote git repo, you must specify a
+;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
+;; https://github.com/raxod502/straight.el#the-recipe-format
+;(package! another-package
+;  :recipe (:host github :repo "username/repo"))
+
+;; If the package you are trying to install does not contain a PACKAGENAME.el
+;; file, or is located in a subdirectory of the repo, you'll need to specify
+;; `:files' in the `:recipe':
+;(package! this-package
+;  :recipe (:host github :repo "username/repo"
+;           :files ("some-file.el" "src/lisp/*.el")))
+
+;; If you'd like to disable a package included with Doom, you can do so here
+;; with the `:disable' property:
+;(package! builtin-package :disable t)
+
+;; You can override the recipe of a built in package without having to specify
+;; all the properties for `:recipe'. These will inherit the rest of its recipe
+;; from Doom or MELPA/ELPA/Emacsmirror:
+;(package! builtin-package :recipe (:nonrecursive t))
+;(package! builtin-package-2 :recipe (:repo "myfork/package"))
+
+;; Specify a `:branch' to install a package from a particular branch or tag.
+;; This is required for some packages whose default branch isn't 'master' (which
+;; our package manager can't deal with; see raxod502/straight.el#279)
+;(package! builtin-package :recipe (:branch "develop"))
+
+;; Use `:pin' to specify a particular commit to install.
+;(package! builtin-package :pin "1a2b3c4d5e")
+
+
+;; Doom's packages are pinned to a specific commit and updated from release to
+;; release. The `unpin!' macro allows you to unpin single packages...
+;(unpin! pinned-package)
+;; ...or multiple packages
+;(unpin! pinned-package another-pinned-package)
+;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
+;(unpin! t)
+#+end_src
+
+** Init
+:PROPERTIES:
+:HASH:     1811958967313230203
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp :tangle no
+;; This file controls what Doom modules are enabled and what order they load
+;; in. Remember to run 'doom sync' after modifying it!
+
+;; NOTE Press 'SPC h d h' (or 'C-h d h' for non-vim users) to access Doom's
+;;      documentation. There you'll find a link to Doom's Module Index where all
+;;      of our modules are listed, including what flags they support.
+
+;; NOTE Move your cursor over a module's name (or its flags) and press 'K' (or
+;;      'C-c c k' for non-vim users) to view its documentation. This works on
+;;      flags as well (those symbols that start with a plus).
+;;
+;;      Alternatively, press 'gd' (or 'C-c c d') on a module to browse its
+;;      directory (for easy access to its source code).
+#+end_src
+
+* ✨ Inspiration
+:PROPERTIES:
+:HASH:     1495308942616782540
+:MODIFIED: [2022-04-11 05:35]
+:END:
+** Doomed: Henrik Lissner's Config
+:PROPERTIES:
+:HASH:     596361576157293816
+:MODIFIED: [2022-04-11 05:35]
+:END:
+https://github.com/hlissner/doom-emacs-private
+** Doomed: Doom
+:PROPERTIES:
+:HASH:     -132497357133188913
+:MODIFIED: [2022-04-11 05:35]
+:END:
+https://github.com/hlissner/doom-emacs
+** Doomed: Niklase Klund's Config
+:PROPERTIES:
+:HASH:     366818587947192866
+:MODIFIED: [2022-04-11 05:35]
+:END:
+https://github.com/niklaseklund/doom-private
+I picked this guy from Doom's Discord. He is a nobody or he's the guy who made 1hr literate config Youtube video. I don't know. See if he's worth keeping.
+** Doomed: Zaiste Config
+:PROPERTIES:
+:HASH:     -773172263474617043
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Doom casts creator
+https://github.com/zaiste/.doom.d
+** Marco Hassan Config
+:PROPERTIES:
+:HASH:     -546725068079700446
+:MODIFIED: [2022-04-11 05:35]
+:END:
+A nice literate config based on WSL
+https://marcohassan.github.io/bits-of-experience/pages/emacs/
+** Bastien Guerry Config
+:PROPERTIES:
+:HASH:     -2208159897155168186
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Org maintainer
+https://github.com/bzg/dotemac
+** Steve Purcell Config
+:PROPERTIES:
+:HASH:     -187127252500958381
+:MODIFIED: [2022-04-11 05:35]
+:END:
+https://github.com/purcell/emacs.d
+
+** Another Orgy Config
+:PROPERTIES:
+:HASH:     -2169265958866655099
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Ricing Org Mode: A Beautiful Writing Environment --- https://lucidmanager.org/productivity/ricing-org-mode/
+
+** Org centeric Config
+:PROPERTIES:
+:HASH:     498780680401698138
+:MODIFIED: [2022-04-11 05:35]
+:END:
+zzamboni.org | Beautifying Org Mode in Emacs --- https://zzamboni.org/post/beautifying-org-mode-in-emacs/
+
+* 😫 Caveats
+:PROPERTIES:
+:HASH:     -92310420340276964
+:MODIFIED: [2022-04-11 05:35]
+:END:
+** DONE Projectile discovers my $HOME as a project so the cache takes ages to build
+CLOSED: [2022-04-10 Sun 05:11]
+:PROPERTIES:
+:HASH:     -739608216388574315
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Luckily ~doom doctor~ has a solution
+#+begin_src emacs-lisp
+;; (after! projectile (setq projectile-project-root-files-bottom-up (remove
+;;                                                                   ".git" projectile-project-root-files-bottom-up)))
+#+end_src
+From [[Doomed: Zaiste Config][zaiste]]'s config
+#+begin_src emacs-lisp
+;; (setq! projectile-project-search-path '("~/c/"))
+#+end_src
+*Solution* didn't need either of them. I had empty =package.json= and =package-lock.json= in ~$HOME~ so I just deleted them.
+** Quiting ~emacsclient~ accumulates workspace clutter
+:PROPERTIES:
+:HASH:     64977146709089095
+:MODIFIED: [2022-04-11 05:35]
+:END:
+[BUG] Closing terminal emacsclient with :q accumulates previous instance(s) at the Echo Area · Issue #2202 · hlissner/doom-emacs --- https://github.com/hlissner/doom-emacs/issues/2202
+#+begin_quote
+Close emacs with C-x C-c instead of :q
+#+end_quote
+
+
+* 💅 Rudimentary Setup
+:PROPERTIES:
+:HASH:     1987946687453579326
+:MODIFIED: [2022-04-11 05:35]
+:END:
+** PGP Identification
+:PROPERTIES:
+:HASH:     -544829671908482282
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Some functionality uses this to identify you, e.g. GPG configuration, email clients, file templates and snippets. It is optional.
+#+begin_src emacs-lisp
+(setq user-full-name "Abstraction"
+      user-mail-address "anraaa@protonmail.com")
+#+end_src
+
+** Kill Emacs silently
+:PROPERTIES:
+:HASH:     -1094061101432852317
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(setq confirm-kill-emacs nil) ; Kill emacs silently
+#+end_src
+
+** Modified frame sizes
+:PROPERTIES:
+:HASH:     -733472501717108821
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Numbers are in characters, so 80 width is 80 character width
+#+begin_src emacs-lisp
+(add-to-list 'default-frame-alist '(height . 40))
+(add-to-list 'default-frame-alist '(width . 120))
+#+end_src
+
+** Fonts
+:PROPERTIES:
+:HASH:     -1761723053840559177
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+;; Doom exposes five (optional) variables for controlling fonts in Doom:
+;;
+;; - `doom-font' -- the primary font to use
+;; - `doom-variable-pitch-font' -- a non-monospace font (where applicable)
+;; - `doom-big-font' -- used for `doom-big-font-mode'; use this for
+;;   presentations or streaming.
+;; - `doom-unicode-font' -- for unicode glyphs
+;; - `doom-serif-font' -- for the `fixed-pitch-serif' face
+;;
+;; See 'C-h v doom-font' for documentation and more examples of what they
+;; accept. For example:
+;;
+;; If you or Emacs can't find your font, use 'M-x describe-font' to look them
+;; up, `M-x eval-region' to execute elisp code, and 'M-x doom/reload-font' to
+;; refresh your font settings. If Emacs still can't find your font, it likely
+;; wasn't installed correctly. Font issues are rarely Doom issues!
+
+(setq doom-font (font-spec :family "Iosevka" :size 13); :weight 'regular)
+     doom-variable-pitch-font (font-spec :family "Iosevka Aile" :size 15)
+     doom-serif-font (font-spec :family "Iosevka Etoile" :size 13))
+#+end_src
+
+** Setting theme
+:PROPERTIES:
+:HASH:     -1926256919462081245
+:MODIFIED: [2022-04-11 23:53]
+:END:
+#+begin_src emacs-lisp
+;; There are two ways to load a theme. Both assume the theme is installed and
+;; available. You can either set `doom-theme' or manually load a theme with the
+;; `load-theme' function. This is the default:
+
+;; (setq doom-theme 'doom-vibrant)
+(setq doom-theme 'doom-dracula) ; I can't not use Dracula, sigh
+#+end_src
+*** Customization
+:PROPERTIES:
+:HASH:     -1630052275093738405
+:MODIFIED: [2022-04-11 23:57]
+:END:
+#+begin_src emacs-lisp
+(doom-themes-org-config)                ; corrects and improves some of org-mode's native fontification issues
+(doom-themes-visual-bell-config)        ; flash the mode-line when the Emacs bell rings
+#+end_src
+
+** Turning on line numbers
+:PROPERTIES:
+:HASH:     1497239209112513179
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+;; This determines the style of line numbers in effect. If set to `nil', line
+;; numbers are disabled. For relative line numbers, set this to `relative'.
+
+(setq display-line-numbers-type t)
+#+end_src
+
+* 📦 Packages
+:PROPERTIES:
+:HASH:     -614727976801664040
+:MODIFIED: [2022-04-11 05:35]
+:END:
+** Default Doom Packages
+:PROPERTIES:
+:HASH:     -1891907345927836123
+:MODIFIED: [2022-04-11 05:35]
+:END:
+*** Input
+:PROPERTIES:
+:HASH:     -1804013703728844934
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: input
+#+begin_src emacs-lisp :tangle no
+       ;;chinese
+       ;;japanese
+       ;;layout            ; auie,ctsrnm is the superior home row
+#+end_src
+
+*** Completion
+:PROPERTIES:
+:HASH:     -477137478543467734
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: completion
+#+begin_src emacs-lisp :tangle no
+       company           ; the ultimate code completion backend
+       ;; (helm              ; the *other* search engine for love and life
+       ;;  +icons) ; Helm with icons
+       ;;ido               ; the other *other* search engine...
+       ;;ivy               ; a search engine for love and life
+       (vertico           ; the search engine of the future
+        +icons) ; Vertico with icons
+#+end_src
+
+*** UI
+:PROPERTIES:
+:HASH:     -194633935070837475
+:MODIFIED: [2022-04-14 12:41]
+:END:
+#+name: ui
+#+begin_src emacs-lisp :tangle no
+       ;;deft              ; notational velocity for Emacs
+       doom              ; what makes DOOM look the way it does
+       ;; doom-dashboard    ; a nifty splash screen for Emacs
+       ;;doom-quit         ; DOOM quit-message prompts when you quit Emacs
+       ;;(emoji +unicode)  ; 🙂
+       hl-todo           ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
+       ;;hydra
+       indent-guides     ; highlighted indent columns
+       ;;ligatures         ; ligatures and symbols to make your code pretty again
+       ;;minimap           ; show a map of the code on the side
+       modeline          ; snazzy, Atom-inspired modeline, plus API
+       nav-flash         ; blink cursor line after big motions
+       ;;neotree           ; a project drawer, like NERDTree for vim
+       ophints           ; highlight the region an operation acts on
+       (popup +defaults)   ; tame sudden yet inevitable temporary windows
+       ;; tabs              ; a tab bar for Emacs
+       ;;treemacs          ; a project drawer, like neotree but cooler
+       ;;unicode           ; extended unicode support for various languages
+       vc-gutter         ; vcs diff in the fringe
+       vi-tilde-fringe   ; fringe tildes to mark beyond EOB
+       ;;window-select     ; visually switch windows
+       workspaces        ; tab emulation, persistence & separate workspaces
+       zen               ; distraction-free coding or writing
+#+end_src
+
+*** Editor
+:PROPERTIES:
+:HASH:     -2191131789632887273
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: editor
+#+begin_src emacs-lisp :tangle no
+       (evil +everywhere); come to the dark side, we have cookies
+       file-templates    ; auto-snippets for empty files
+       fold              ; (nigh) universal code folding
+       (format +onsave)   ; automated prettiness
+       ;;god               ; run Emacs commands without modifier keys
+       ;;lispy             ; vim for lisp, for people who don't like vim
+       multiple-cursors  ; editing in many places at once
+       ;;objed             ; text object editing for the innocent
+       ;;parinfer          ; turn lisp into python, sort of
+       rotate-text       ; cycle region at point between text candidates
+       snippets          ; my elves. They type so I don't have to
+       ;;word-wrap         ; soft wrapping with language-aware indent
+#+end_src
+
+*** Emacs
+:PROPERTIES:
+:HASH:     -646176351946326494
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: emacs
+#+begin_src emacs-lisp :tangle no
+       (dired             ; making dired pretty [functional]
+        +ranger          ; VIM-inspired file manager
+        +icons)         ; display icons for file types
+       electric          ; smarter, keyword-based electric-indent
+       (ibuffer         ; interactive buffer management
+        +icons)         ; enagle icons for buffer selection
+       undo              ; persistent, smarter undo for your inevitable mistakes
+       vc                ; version-control and Emacs, sitting in a tree
+#+end_src
+
+*** Term
+:PROPERTIES:
+:HASH:     200791783762389458
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: term
+#+begin_src emacs-lisp :tangle no
+       ;;eshell            ; the elisp shell that works everywhere
+       ;;shell             ; simple shell REPL for Emacs
+       ;;term              ; basic terminal emulator for Emacs
+       vterm             ; the best terminal emulation in Emacs
+#+end_src
+
+*** Checkers
+:PROPERTIES:
+:HASH:     -2252699014571034637
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: checkers
+#+begin_src emacs-lisp :tangle no
+       syntax              ; tasing you for every semicolon you forget
+       (spell +flyspell) ; tasing you for misspelling mispelling
+       ;; grammar           ; tasing grammar mistake every you make
+#+end_src
+
+*** Tools
+:PROPERTIES:
+:HASH:     -503452591417279277
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: tools
+#+begin_src emacs-lisp :tangle no
+       ;;ansible
+       ;;biblio            ; Writes a PhD for you (citation needed)
+       ;;debugger          ; FIXME stepping through code, to help you add bugs
+       ;;direnv
+       ;;docker
+       ;;editorconfig      ; let someone else argue about tabs vs spaces
+       ;;ein               ; tame Jupyter notebooks with emacs
+       (eval +overlay)     ; run code, run (also, repls)
+       ;;gist              ; interacting with github gists
+       lookup              ; navigate your code and its documentation
+       lsp               ; M-x vscode
+       magit             ; a git porcelain for Emacs
+       ;;make              ; run make tasks from Emacs
+       ;;pass              ; password manager for nerds
+       pdf               ; pdf enhancements
+       ;;prodigy           ; FIXME managing external services & code builders
+       rgb               ; creating color strings
+       ;;taskrunner        ; taskrunner for all your projects
+       ;;terraform         ; infrastructure as code
+       ;;tmux              ; an API for interacting with tmux
+       ;;upload            ; map local to remote projects via ssh/ftp
+#+end_src
+
+*** OS
+:PROPERTIES:
+:HASH:     -2128827424064142363
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: os
+#+begin_src emacs-lisp :tangle no
+       (:if IS-MAC macos)  ; improve compatibility with macOS
+       ;;tty               ; improve the terminal Emacs experience
+#+end_src
+
+*** Lang
+:PROPERTIES:
+:HASH:     507667049855301005
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: lang
+#+begin_src emacs-lisp :tangle no
+       ;;agda              ; types of types of types of types...
+       ;;beancount         ; mind the GAAP
+       ;;(cc +lsp)         ; C > C++ == 1
+       ;;clojure           ; java with a lisp
+       ;;common-lisp       ; if you've seen one lisp, you've seen them all
+       ;;coq               ; proofs-as-programs
+       ;;crystal           ; ruby at the speed of c
+       ;;csharp            ; unity, .NET, and mono shenanigans
+       data              ; config/data formats
+       ;;(dart +flutter)   ; paint ui and not much else
+       ;;dhall
+       ;;elixir            ; erlang done right
+       ;;elm               ; care for a cup of TEA?
+       emacs-lisp        ; drown in parentheses
+       ;;erlang            ; an elegant language for a more civilized age
+       ;;ess               ; emacs speaks statistics
+       ;;factor
+       ;;faust             ; dsp, but you get to keep your soul
+       ;;fortran           ; in FORTRAN, GOD is REAL (unless declared INTEGER)
+       ;;fsharp            ; ML stands for Microsoft's Language
+       ;;fstar             ; (dependent) types and (monadic) effects and Z3
+       ;;gdscript          ; the language you waited for
+       ;;(go +lsp)         ; the hipster dialect
+       ;;(graphql +lsp)    ; Give queries a REST
+       ;;(haskell +lsp)    ; a language that's lazier than I am
+       ;;hy                ; readability of scheme w/ speed of python
+       ;;idris             ; a language you can depend on
+       json              ; At least it ain't XML
+       ;;(java +lsp)       ; the poster child for carpal tunnel syndrome
+       (javascript        ; all(hope(abandon(ye(who(enter(here))))))
+        +lsp)             ; turning on LSP mode (PS. :tools lsp must be on for this)
+       ;;julia             ; a better, faster MATLAB
+       ;;kotlin            ; a better, slicker Java(Script)
+       ;;latex             ; writing papers in Emacs has never been so fun
+       ;;lean              ; for folks with too much to prove
+       ;;ledger            ; be audit you can be
+       ;;lua               ; one-based indices? one-based indices
+       markdown          ; writing docs for people to ignore
+       ;;nim               ; python + lisp at the speed of c
+       ;;nix               ; I hereby declare "nix geht mehr!"
+       ;;ocaml             ; an objective camel
+       (org               ; organize your plain life in plain text
+        ;; +pretty ; Pretty Org
+        +roam2) ; Roam research for Eamcs
+       ;;php               ; perl's insecure younger brother
+       ;;plantuml          ; diagrams for confusing people more
+       ;;purescript        ; javascript, but functional
+       python            ; beautiful is better than ugly
+       ;;qt                ; the 'cutest' gui framework ever
+       ;;racket            ; a DSL for DSLs
+       ;;raku              ; the artist formerly known as perl6
+       ;;rest              ; Emacs as a REST client
+       ;;rst               ; ReST in peace
+       ;;(ruby +rails)     ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
+       ;;rust              ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+       ;;scala             ; java, but good
+       ;;(scheme +guile)   ; a fully conniving family of lisps
+       sh                ; she sells {ba,z,fi}sh shells on the C xor
+       ;;sml
+       ;;solidity          ; do you need a blockchain? No.
+       ;;swift             ; who asked for emoji variables?
+       ;;terra             ; Earth and Moon in alignment for performance.
+       web               ; the tubes
+       yaml              ; JSON, but readable
+       ;;zig               ; C, but simpler
+#+end_src
+
+*** Apps
+:PROPERTIES:
+:HASH:     -254478820200120856
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: app
+#+begin_src emacs-lisp :tangle no
+       ;;calendar
+       ;;emms
+       everywhere        ; *leave* Emacs!? You must be joking
+       ;;irc               ; how neckbeards socialize
+       ;; (rss +org)        ; emacs as an RSS reader
+       ;;twitter           ; twitter client https://twitter.com/vnought
+#+end_src
+
+*** Email
+:PROPERTIES:
+:HASH:     -1147641345404664808
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: email
+#+begin_src emacs-lisp :tangle no
+       ;;(mu4e +org +gmail)
+       ;;notmuch
+       ;;(wanderlust +gmail)
+#+end_src
+
+*** Config
+:PROPERTIES:
+:HASH:     415661580072449171
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+name: config
+#+begin_src emacs-lisp :tangle no
+       ;;literate
+       (default +bindings +smartparens)
+#+end_src
+
+*** Skeleton
+:PROPERTIES:
+:HASH:     1536234159516519922
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp :noweb yes :tangle init.el
+(doom! :input
+       <<input>>
+
+       :completion
+       <<completion>>
+
+       :ui
+       <<ui>>
+
+       :editor
+       <<editor>>
+
+       :emacs
+       <<emacs>>
+
+       :term
+       <<term>>
+
+       :checkers
+       <<checkers>>
+
+       :tools
+       <<tools>>
+
+       :os
+       <<os>>
+
+       :lang
+       <<lang>>
+
+       :email
+       <<email>>
+
+       :app
+       <<app>>
+
+       :config
+       <<config>>
+)
+#+end_src
+
+** Org Mode
+:PROPERTIES:
+:HASH:     570529774016187623
+:MODIFIED: [2022-04-11 05:35]
+:END:
+*** Defaults
+:PROPERTIES:
+:HASH:     -536849835365370004
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+;; If you use `org' and don't want your org files in the default location below,
+;; change `org-directory'. It must be set before org loads!
+(setq org-directory "~/o/")
+
+  (setq org-log-done 'time     ; Telling org to log DONE time
+        org-ellipsis " ▾ ") ;  ▼  ; changing default ellipsis from ... to [...]
+#+end_src
+
+*** GTD like TODO keywords
+:PROPERTIES:
+:HASH:     -1572272339994834408
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Changing Doom's default TODO keywords to more human ones. I feel like the current ones are very technical do not activate the right neuron in my brain. So I'll use the ones Rainer shows in his Getting things done with Org mode course.
+#+begin_src emacs-lisp
+(after! org
+(setq org-todo-keywords
+        '((sequence
+           "TODO(t)"
+           "PROJ(p)"
+           "LOOP(l)"
+           "NEXT(n)"
+           "WAIT(w)"
+           "HOLD(h)"
+           "SMDY(s)"
+           "IDEA(i)"
+           "|"
+           "DONE(d)"
+           "CNCL(c)")
+          (sequence
+           "[ ](x)"   ; A task that needs doing
+           "[-](S)"   ; Task is in progress
+           "[?](W)"   ; Task is being held up or paused
+           "|"
+           "[X](D)")  ; Task was completed
+          ;; (sequence
+          ;;  "|"
+          ;;  "OKAY(o)"
+          ;;  "YES(y)"
+          ;;  "NO(n)")
+          )
+        org-todo-keyword-faces
+        '(
+          ("[-]"  . +org-todo-active)
+          ("NEXT" . +org-todo-active)
+          ("[?]"  . +org-todo-onhold)
+          ("WAIT" . +org-todo-onhold)
+          ("HOLD" . +org-todo-onhold)
+          ("PROJ" . +org-todo-project)
+          ;; ("NO"   . +org-todo-cancel)
+          ("CNCL" . +org-todo-cancel))))
+#+end_src
+
+**** Keyword explaination
+:PROPERTIES:
+:HASH:     1868956213565703368
+:MODIFIED: [2022-04-11 05:35]
+:END:
+***** \TODO
+:PROPERTIES:
+:HASH:     -412752838068210583
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Defines an action that needs to be done, but you cannot start the task at that moment itself because you’re missing some requirement that is needed to start this. An actionable item that needs to be "DONE"
+***** \NEXT
+:PROPERTIES:
+:HASH:     -292273914596953967
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Defines a next action. This is an action that you can do at any moment because you have everything in place to do this action. A task that is supposed to be done next or is in progress. Defines a next action. This is an action that you can do at any moment because you have everything in place to do this action.
+***** \HOLD
+:PROPERTIES:
+:HASH:     1195434898652280752
+:MODIFIED: [2022-04-11 05:35]
+:END:
+This task is paused/on hold because of me
+***** \WAIT
+:PROPERTIES:
+:HASH:     1038012201295416282
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Defines an action which only task is that you are waiting for something. This could be an answer from someone that you asked a question or even the delivery of some spare parts. Something external is holding up this task
+***** \SMDY
+:PROPERTIES:
+:HASH:     -1840707633669232792
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Defines an action that you have not yet decided if you really want to do it or not. Its just a sort of “idea” that you want to keep in mind, but at the moment it is not really actionable.
+***** \DONE
+:PROPERTIES:
+:HASH:     899401533102850552
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Marks successfully completed tasks. Task successfully completed or a completed item
+***** \CNCL
+:PROPERTIES:
+:HASH:     1938482766581098848
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Marks tasks that you started, but then stopped for some reasons. They are not complete, but you decided that you don’t work on them anymore. Task was cancelled, aborted or is no longer applicable
+***** \PROJ
+:PROPERTIES:
+:HASH:     2142307652230969571
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Stands for project and is used to group some actions together to be a project. A project, which usually contains other tasks
+***** \IDEA
+:PROPERTIES:
+:HASH:     -918620289711429212
+:MODIFIED: [2022-04-11 05:35]
+:END:
+An unconfirmed and unapproved task or notion
+***** \LOOP
+:PROPERTIES:
+:HASH:     -2224993678865104868
+:MODIFIED: [2022-04-11 05:35]
+:END:
+A recurring task
+*** Defining capture templates
+:PROPERTIES:
+:HASH:     1845998331985771888
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Doom add its own capture template. So if you add template without ~after!~ they are overwritten. The solution, therefore, is to use ~after!~ to add your templates after org loads. But this will remove Doom's default templates. Solution?
++ Press =SPC h v=
++ Search ~org-capture-templates~
++ Copy value and readd with your customizations
+#+begin_src emacs-lisp
+(after! org
+  (setq org-capture-templates
+        '(("t" "Personal todo" entry
+           (file+headline +org-capture-todo-file "Inbox")
+           "* TODO %?\n%i\n%a" :prepend t)
+          ("n" "Personal notes" entry
+           (file+headline +org-capture-notes-file "Inbox")
+           "* %u %?\n%i\n%a" :prepend t)
+          ("j" "Journal" entry
+           (file+olp+datetree +org-capture-journal-file)
+           "* %U %?\n%i\n%a" :prepend t)
+          ("p" "Templates for projects")
+          ("pt" "Project-local todo" entry
+           (file+headline +org-capture-project-todo-file "Inbox")
+           "* TODO %?\n%i\n%a" :prepend t)
+          ("pn" "Project-local notes" entry
+           (file+headline +org-capture-project-notes-file "Inbox")
+           "* %U %?\n%i\n%a" :prepend t)
+          ("pc" "Project-local changelog" entry
+           (file+headline +org-capture-project-changelog-file "Unreleased")
+           "* %U %?\n%i\n%a" :prepend t)
+          ("o" "Centralized templates for projects")
+          ("ot" "Project todo" entry #'+org-capture-central-project-todo-file "* TODO %?\n %i\n %a" :heading "Tasks" :prepend nil)
+          ("on" "Project notes" entry #'+org-capture-central-project-notes-file "* %U %?\n %i\n %a" :heading "Notes" :prepend t)
+          ("oc" "Project changelog" entry #'+org-capture-central-project-changelog-file "* %U %?\n %i\n %a" :heading "Changelog" :prepend t))))
+ #+end_src
+
+*** TAB should do recursive visibility cycling
+:PROPERTIES:
+:HASH:     710575662496333997
+:MODIFIED: [2022-04-15 09:53]
+:END:
+Doom changes TAB to toggle only the visibility state of the current subtree, rather than cycle through it recursively. We will change that back to the normal behavior.
+#+begin_src emacs-lisp
+;; (after! evil-org
+;;   (remove-hook 'org-tab-first-hook #'+org-cycle-only-current-subtree-h))
+#+end_src
+
+*** Center Org buffers
+:PROPERTIES:
+:HASH:     -2006323710869406694
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(after! org
+  (add-hook! org-mode
+    (visual-line-mode 1)
+    (setq visual-fill-column-width 140
+          visual-fill-column-center-text t)
+    (visual-fill-column-mode 1)))
+#+end_src
+
+*** Mixed pitch by default
+:PROPERTIES:
+:HASH:     107787036312630712
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(after! org (add-hook! org-mode (mixed-pitch-mode 1)))
+#+end_src
+
+*** Making invisible parts visible
+:PROPERTIES:
+:HASH:     1198665373321569140
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Installing the package
+#+begin_src emacs-lisp :tangle packages.el
+(package! org-appear)
+#+end_src
+Turning it on automatically. Emphasis marker toggle will be turned on by default
+#+begin_src emacs-lisp
+(after! org
+  (add-hook! org-mode
+    (org-appear-mode 1)))
+(setq org-appear-autolinks t) ; Auto toggle links
+#+end_src
+
+*** Random notes
+:PROPERTIES:
+:HASH:     2270783688704142216
+:MODIFIED: [2022-04-11 05:35]
+:END:
+From https://github.com/mwfogleman/org-randomnote
+#+begin_src emacs-lisp :tangle packages.el
+(package! org-randomnote)
+#+end_src
+Setting org directory as the source of randomization
+#+begin_src emacs-lisp
+(load-library "find-lisp")
+(setq org-randomnote-candidates
+      (find-lisp-find-files org-directory "\.org$"))
+#+end_src
+However, be aware that you may see the warning org-randomnote: Wrong type argument: ~number-or-marker-p, nil~. This warning will crop up when org-randomnote brings up a file that doesn’t have any actual Org headers (e.g. “* 1 Projects”).
+
+For org-randomnote’s purposes, a “note” is considered a heading in an Org file. In this way, an org file is somewhat analogous to a notebook in Evernote, whereas the individual headings are notes.
+
+This is not necessarily intuitive or perfect, but it works well enough to begin with, especially since it can still find such a file randomly.
+
+#+begin_src emacs-lisp
+(map! :leader
+      (:prefix-map ("n" . "notes")
+       :desc "Open random headline/note"      "k" #'org-randomnote))
+#+end_src
+
+*** Incremntally large sized headlines
+:PROPERTIES:
+:HASH:     743081704451262076
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(after! org
+  (set-face-attribute 'org-level-1 nil
+                      :height 1.15)
+  (set-face-attribute 'org-level-2 nil
+                      :height 1.10)
+  (set-face-attribute 'org-level-3 nil
+                      :height 1.05)
+  (set-face-attribute 'org-level-4 nil
+                      :height 1.00)
+  (set-face-attribute 'org-level-5 nil
+                      :height 1.00)
+  (set-face-attribute 'org-level-6 nil
+                      :height 1.00)
+  (set-face-attribute 'org-document-title nil
+                      :height 1.50))
+#+end_src
+
+*** Adding line spacing aka line height
+:PROPERTIES:
+:HASH:     901844763891418414
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(setq-hook! org-mode line-spacing 0.4)
+#+end_src
+
+*** Hide emphasis markers (stuff like bold, italic, etc)
+:PROPERTIES:
+:HASH:     295047616124043381
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(setq org-hide-emphasis-markers t)
+#+end_src
+
+*** Make bullet lists actually have bullets
+:PROPERTIES:
+:HASH:     -1985288809761497651
+:MODIFIED: [2022-04-12 00:02]
+:END:
+This is from a non-doom config. I'm sure Doom has a more elegant solution than this one
+#+begin_src emacs-lisp
+ (font-lock-add-keywords 'org-mode
+                          '(("^ *\\([-]\\) "
+                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+#+end_src
+Don't know if I still need this after setting [[Customization]] theme setting
+
+*** ~open-file~ protocol
+:PROPERTIES:
+:HASH:     2169826975733221311
+:MODIFIED: [2022-04-11 11:28]
+:END:
+#+begin_src emacs-lisp
+(defvar org-protocol-open-file-at-line nil
+  "A property list used by `org-protocol-server-visit-hook-fun'.")
+
+(defun org-protocol-server-visit-hook-fun ()
+  "Jump to line number detected by `org-protocol-open-file'.
+Transferred from `org-protocol-open-file' via variable `org-protocol-open-file-at-line'."
+  (let ((file (plist-get org-protocol-open-file-at-line :file))
+    (line (1- (string-to-number (or (plist-get org-protocol-open-file-at-line :line) "1")))))
+    (when (file-equal-p file (buffer-file-name))
+      (unless (plist-get org-protocol-open-file-at-line :read-only)
+    (read-only-mode -1))
+      (goto-char (point-min)) ;; should actually already be there...
+      (forward-line line))))
+
+(add-hook 'server-visit-hook #'org-protocol-server-visit-hook-fun)
+
+(defun org-protocol-open-file (pars)
+  "Act as org-protocol-protocol-alist function with PARS as args.
+Handle links like: org-protocol://open-file?file=/foo/ss/subdir/foo.js&line=132"
+  (let ((file (plist-get pars :file)))
+    (setq org-protocol-open-file-at-line pars)
+    (and (file-exists-p file)
+     file)))
+
+(eval-after-load 'org-protocol
+  (lambda ()
+    (add-to-list 'org-protocol-protocol-alist
+         '("open-file"
+           :protocol "open-file"
+           :function org-protocol-open-file))))
+#+end_src
+
+*** Add modified property when heading descendant changes
+:PROPERTIES:
+:HASH:     -967097660314840631
+:MODIFIED: [2022-04-12 10:15]
+:END:
+From https://emacs.stackexchange.com/a/39376
+#+begin_src emacs-lisp
+(defun yant/getentryhash ()
+  "Get the hash sum of the text in current entry, except :HASH: and :MODIFIED: property texts."
+  (save-excursion
+    (let* ((beg (progn (org-back-to-heading) (point)))
+       (end (progn
+          (forward-char)
+          (if (not (re-search-forward "^\*+ " (point-max) t))
+              (point-max)
+            (match-beginning 0))))
+       (full-str (buffer-substring beg end))
+       (str-nohash (if (string-match "^ *:HASH:.+\n" full-str)
+               (replace-match "" nil nil full-str)
+             full-str))
+       (str-nohash-nomod (if (string-match "^ *:MODIFIED:.+\n" str-nohash)
+                 (replace-match "" nil nil str-nohash)
+                   str-nohash))
+       (str-nohash-nomod-nopropbeg (if (string-match "^ *:PROPERTIES:\n" str-nohash-nomod)
+                       (replace-match "" nil nil str-nohash-nomod)
+                     str-nohash-nomod))
+       (str-nohash-nomod-nopropbeg-end (if (string-match "^ *:END:\n" str-nohash-nomod-nopropbeg)
+                           (replace-match "" nil nil str-nohash-nomod-nopropbeg)
+                         str-nohash-nomod-nopropbeg)))
+      (sxhash str-nohash-nomod-nopropbeg-end))))
+
+(defun yant/update-modification-time ()
+  "Set the :MODIFIED: property of the current entry to NOW and update :HASH: property."
+  (org-set-property "HASH" (format "%s" (yant/getentryhash)))
+  (org-set-property "MODIFIED" (format-time-string "[%Y-%m-%d %H:%M]")))
+(defun yant/skip-nonmodified ()
+  "Skip org entries, which were not modified according to the :HASH: property"
+  (let ((next-headline (save-excursion (or (outline-next-heading) (point-max)))))
+    (if (string= (org-entry-get (point) "HASH" nil) (format "%s" (yant/getentryhash)))
+    next-headline
+      nil)))
+
+(add-hook 'before-save-hook (lambda ()
+                  (when (eq major-mode 'org-mode)
+                (org-map-entries #'yant/update-modification-time nil 'file #'yant/skip-nonmodified))))
+#+end_src
+Attempting to fix the non-existing agenda file persistent error
+#+begin_src emacs-lisp
+(define-advice org-check-agenda-file (:around (OLDFUN file) ignore-non-existant-files)
+ "Suppress \"Non existent agenda file...\" query. Just continue."
+  (if (file-exists-p file)
+      (funcall OLDFUN file)
+    (progn
+      (org-remove-file file)
+      (throw 'nextfile t))))
+(advice-remove 'org-check-agenda-file #'org-check-agenda-file@ignore-non-existant-files)
+
+(add-hook 'before-save-hook
+      (lambda ()
+        (when (eq major-mode 'org-mode)
+          (advice-add 'org-check-agenda-file :around #'org-check-agenda-file@ignore-non-existant-files)
+          (org-map-entries #'yant/update-modification-time nil 'file #'yant/skip-nonmodified)
+          (advice-remove 'org-check-agenda-file #'org-check-agenda-file@ignore-non-existant-files))))
+#+end_src
+*** Parse org files recursively for agenda
+:PROPERTIES:
+:HASH:     528597573237105496
+:MODIFIED: [2022-04-12 10:16]
+:END:
+From https://stackoverflow.com/a/41969519
+#+begin_src emacs-lisp
+(setq org-agenda-files (directory-files-recursively "~/o/" "\\.org$"))
+#+end_src
+
+** Org Roam
+:PROPERTIES:
+:HASH:     104513391294094303
+:MODIFIED: [2022-04-11 07:41]
+:END:
+#+begin_src emacs-lisp
+(setq org-roam-directory org-directory                           ; Notes directory
+      org-roam-db-location (concat org-directory ".org-roam.db") ; Database file
+      org-roam-dailies-directory "journal/")                     ; Journal directory
+(org-roam-db-autosync-mode)                                      ; Update cache on save, etc .
+#+end_src
+
+** Better defaults
+:PROPERTIES:
+:HASH:     1432645341679261786
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(setq org-roam-directory org-directory                           ; Notes directory
+      org-roam-db-location (concat org-directory ".org-roam.db") ; Database file
+      org-roam-dailies-directory "journal/")                     ; Journal directory
+(org-roam-db-autosync-mode)                                      ; Update cache on save, etc .
+#+end_src
+
+** Roam UI
+:PROPERTIES:
+:HASH:     581244372959127708
+:MODIFIED: [2022-04-16 08:24]
+:END:
+Installing packages
+#+begin_src emacs-lisp :tangle packages.el
+;; (unpin! org-roam) ; We want to use latest org-roam
+(package! org-roam-ui)
+#+end_src
+Setting them up
+ #+begin_src emacs-lisp
+(use-package! websocket
+    :after org-roam)
+ (use-package! org-roam-ui
+    :after org-roam ;; or :after org
+;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+;;         a hookable mode anymore, you're advised to pick something yourself
+;;         if you don't care about startup time, use
+;;  :hook (after-init . org-roam-ui-mode)
+    :config
+    (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
+#+end_src
+
+** Nyan Mode
+:PROPERTIES:
+:HASH:     855864738914068889
+:MODIFIED: [2022-04-11 05:35]
+:END:
+Installing package
+#+begin_src emacs-lisp :tangle packages.el
+(package! nyan-mode)
+#+end_src
+Turning it on
+#+begin_src emacs-lisp
+(use-package! nyan-mode
+  :init (nyan-mode 1))
+#+end_src
+
+** Helm
+:PROPERTIES:
+:HASH:     2300326567336774639
+:MODIFIED: [2022-04-11 05:35]
+:END:
+It always comes down to Helm, huh?
+#+begin_src emacs-lisp :tangle packages.el
+;; (unpin! helm)
+;; (package! helm-swoop)
+#+end_src
+
+** Vertico
+:PROPERTIES:
+:HASH:     -1626085322798376645
+:MODIFIED: [2022-04-12 00:06]
+:END:
+*** Trying out postframe
+:PROPERTIES:
+:HASH:     213785714332149882
+:MODIFIED: [2022-04-12 00:08]
+:END:
+*Result* Works but I don't think I /really/ need it. Further more, OOB this frame is displayed in the middle which interferes with other things like searching. I can change the position but... I don't think I need it. Might be useful for big screens.
+#+begin_src emacs-lisp :tangle packages.el
+;; (package! vertico-posframe)
+#+end_src
+Turning it on
+#+begin_src emacs-lisp
+;; (vertico-posframe-mode 1)
+#+end_src
+
+* 🧩 Language Fu
+:PROPERTIES:
+:HASH:     -395027689683326519
+:MODIFIED: [2022-04-11 05:35]
+:END:
+** Javascript
+:PROPERTIES:
+:HASH:     -31091430971133383
+:MODIFIED: [2022-04-11 05:35]
+:END:
+*** Use prettier for formatting
+:PROPERTIES:
+:HASH:     1953244132282560781
+:MODIFIED: [2022-04-11 05:35]
+:END:
+#+begin_src emacs-lisp
+(add-hook! rjsx-mode (setq +format-with-lsp nil))
+#+end_src
+Thanks to these links:
+1) https://github.com/hlissner/doom-emacs/issues/2027
+   The one with fallback idea
+2) https://github.com/hlissner/doom-emacs/issues/4158
+   The one that I refered to
+3) https://github.com/hlissner/doom-emacs/issues/3569
+4) https://github.com/hlissner/doom-emacs/pull/1387
+5) https://github.com/hlissner/doom-emacs/issues/3750
+6) https://github.com/hlissner/doom-emacs/issues/3626
+**** TODO fallback to LSP when prettier config is not available
+:PROPERTIES:
+:HASH:     1248503609021358310
+:MODIFIED: [2022-04-11 05:35]
+:END:
