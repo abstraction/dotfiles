@@ -1112,18 +1112,6 @@ From https://stackoverflow.com/a/41969519
 (org-roam-db-autosync-mode)                                      ; Update cache on save, etc .
 #+end_src
 
-** Better defaults
-:PROPERTIES:
-:HASH:     1432645341679261786
-:MODIFIED: [2022-04-11 05:35]
-:END:
-#+begin_src emacs-lisp
-(setq org-roam-directory org-directory                           ; Notes directory
-      org-roam-db-location (concat org-directory ".org-roam.db") ; Database file
-      org-roam-dailies-directory "journal/")                     ; Journal directory
-(org-roam-db-autosync-mode)                                      ; Update cache on save, etc .
-#+end_src
-
 ** Roam UI
 :PROPERTIES:
 :HASH:     581244372959127708
