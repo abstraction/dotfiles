@@ -1,0 +1,5 @@
+[tools]
+antigravity-cli = "1.1.22"
+codex = "latest"
+gh = "latest"
+uv = "0.12.6"
