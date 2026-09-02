@@ -30,3 +30,10 @@ esac
 
 # Added by codebase-memory-mcp install
 export PATH="/home/seren/.local/bin:$PATH"
+
+# Specstory offline aliases
+alias ssync="specstory sync --no-cloud-sync"
+alias sclaude="specstory run --no-cloud-sync claude"
+sagy() {
+  specstory run --no-cloud-sync antigravity -c "agy --dangerously-skip-permissions $*"
+}
