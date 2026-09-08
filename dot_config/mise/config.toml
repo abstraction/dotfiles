@@ -1,5 +1,9 @@
 [tools]
-antigravity-cli = "1.1.22"
+antigravity-cli = "latest"
+claude = "latest"
 codex = "latest"
+gemini = { version = "latest", allow_builds = ["@github/keytar", "node-pty"] }
 gh = "latest"
+"npm:playwright" = "latest"
+rust = "latest"
 uv = "0.12.6"

@@ -27,3 +27,6 @@
 -- o.bind("SUPER + SHIFT + S", nil, "omarchy-capture-screenshot")
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
 -- o.bind("SUPER + PERIOD", nil, "omarchy-shell shell toggle omarchy.emojis")
+
+-- Workaround for Wispr Flow issue #53 (stuck modifiers)
+o.bind("SUPER + ALT + W", "Reset Wispr Flow keys", "killall -9 wispr-flow-linux-helper")
