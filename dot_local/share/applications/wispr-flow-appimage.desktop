@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Wispr Flow
+Comment=Voice dictation that types into your focused app
+GenericName=Voice Dictation
+Exec=wispr-flow --ozone-platform=x11 %U
+Icon=wispr-flow
+Terminal=false
+Type=Application
+Categories=Utility;AudioVideo;Audio;
+StartupWMClass=Wispr Flow
+Keywords=voice;dictation;speech;transcription;
+X-AppImage-Version=1.6.7-1.0.3
+X-AppImage-Name=Wispr Flow
