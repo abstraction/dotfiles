@@ -1,26 +1,28 @@
 #!/bin/bash
-# statusline.sh - Minimal & Accurate Telemetry Statusline for Antigravity CLI
-# Built with Omarchy minimalist theme, prompt cache awareness, and progressive disclosure
+# statusline.sh - Minimal & Responsive Telemetry Statusline for Antigravity CLI
+# Built with Omarchy minimalist theme, prompt cache awareness, and responsive wrapping
 
 set -euo pipefail
 export LC_NUMERIC=C
 
 for arg in "$@"; do
   if [ "$arg" = "--version" ] || [ "$arg" = "-v" ]; then
-    echo "Antigravity CLI Statusline v0.3.0"
+    echo "Antigravity CLI Statusline v0.3.1"
     exit 0
   fi
   if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
-    echo -e "\033[38;2;120;130;75m\033[1m🚀 Minimal Omarchy Statusline Legend (v0.3.0)\033[0m"
-    echo -e "A high-density, noise-free telemetry statusline with prompt-cache awareness and progressive disclosure."
+    echo -e "\033[38;2;120;130;75m\033[1m🚀 Minimal Omarchy Statusline Legend (v0.3.1)\033[0m"
+    echo -e "A high-density, responsive telemetry statusline that dynamically adapts to split panes."
     echo -e ""
-    echo -e "\033[1mLAYOUT:\033[0m"
-    echo -e "  [State] │ [Git] │ [Model] │ [Directory] │ [Context %] │ [Turn Tokens] │ [Active Counts] │ [Quotas]"
+    echo -e "\033[1mLAYOUT & RESPONSIVENESS:\033[0m"
+    echo -e "  - \033[1mWide terminals (>= 130 cols):\033[0m All segments render on a single, unified flat line."
+    echo -e "  - \033[1mSplit panes (< 130 cols):\033[0m Intelligently wraps into 2 (or 3) balanced lines without clipping."
+    echo -e "  - \033[1mNarrow panes (< 75 cols):\033[0m Compacts paths to basenames and shortens model and cache labels."
     echo -e ""
     echo -e "\033[1mCOMPONENTS & METRICS:\033[0m"
     echo -e "  \033[38;2;95;135;95m\033[1m READY\033[0m / \033[38;2;120;130;75m\033[1m WORKING\033[0m   Agent state (READY, WORKING, THINKING, TOOL)."
     echo -e "  \033[38;2;194;194;176m\033[1m main*\033[0m                   Git branch with dirty indicator (*)."
-    echo -e "  \033[38;2;194;194;176m 3.8 Flash (High)\033[0m       Active model with vendor prefixes stripped."
+    echo -e "  \033[38;2;194;194;176m 3.8 Flash\033[0m               Active model with vendor prefixes stripped."
     echo -e "  \033[38;2;194;194;176m ~/my/think/temp\033[0m        Current working directory."
     echo -e "  \033[38;2;194;194;176m󱍏 8.8%\033[0m                   Active context window fill percentage (warns at 50% / 80%)."
     echo -e "  \033[38;2;194;194;176mturn: 82K in (77K cached) │ 4.2K out\033[0m"
@@ -140,22 +142,6 @@ if ! [[ "$GEMINI_WK_RESET" =~ ^[0-9]+$ ]]; then GEMINI_WK_RESET="-1"; fi
 if ! [[ "$TP_5H_RESET" =~ ^[0-9]+$ ]]; then TP_5H_RESET="-1"; fi
 if ! [[ "$TP_WK_RESET" =~ ^[0-9]+$ ]]; then TP_WK_RESET="-1"; fi
 
-# ─── Subagent Truth Caching ──────────────────────────────────────────────────
-_SUBAGENT_TRUTH_FILE="/tmp/agy_subagent_truth"
-if [ -f "$_SUBAGENT_TRUTH_FILE" ]; then
-  _TRUTH_VAL=$(< "$_SUBAGENT_TRUTH_FILE") 2>/dev/null || _TRUTH_VAL=""
-  _TRUTH_TIME=$(stat -c "%Y" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || stat -f "%m" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || echo "0")
-  _TRUTH_TIME=${_TRUTH_TIME:-0}
-  _NOW=$(date +%s)
-  _AGE=$(( _NOW - _TRUTH_TIME )) 2>/dev/null || _AGE=999
-  if [ "$_AGE" -lt 120 ] && [ "$_TRUTH_VAL" = "0" ] && [ "${SUBAGENTS:-0}" -gt 0 ] 2>/dev/null; then
-    SUBAGENTS=0
-  fi
-fi
-if [ "${SUBAGENTS:-0}" = "0" ]; then
-  echo "0" > "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || true
-fi
-
 # ─── Quota Countdown Helpers ─────────────────────────────────────────────────
 _tick_countdown() {
   local val="$1"
@@ -271,7 +257,9 @@ shorten_path() {
   local path=$1
   [ -z "$path" ] && return
   path="${path/#$HOME/\~}"
-  if [ "${#path}" -gt 25 ]; then
+  if [ "$COLS" -lt 75 ] 2>/dev/null; then
+    echo "$(basename "$path")"
+  elif [ "${#path}" -gt 25 ]; then
     echo "...$(basename "$path")"
   else
     echo "$path"
@@ -280,7 +268,7 @@ shorten_path() {
 
 visible_len() {
   local clean
-  clean=$(printf '%s' "$1" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g")
+  clean=$(echo -e "$1" | sed -r "s/\x1b\[[0-9;]*[a-zA-Z]//g")
   echo "${#clean}"
 }
 
@@ -310,11 +298,17 @@ if [ -z "$VCS_BRANCH" ] && [ -n "$CWD" ]; then
   fi
 fi
 
-# ─── Model Name Formatting ───────────────────────────────────────────────────
+# ─── Model Name Formatting (Responsive) ──────────────────────────────────────
 MODEL_DISP="${MODEL_NAME:-$MODEL_ID}"
 MODEL_DISP="${MODEL_DISP#Gemini }"
 MODEL_DISP="${MODEL_DISP#Claude }"
 MODEL_DISP="${MODEL_DISP#GPT-OSS }"
+
+if [ "$COLS" -lt 70 ] 2>/dev/null; then
+  MODEL_DISP="${MODEL_DISP%% *}"
+elif [ "$COLS" -lt 95 ] 2>/dev/null; then
+  MODEL_DISP="${MODEL_DISP%% (*}"
+fi
 
 # ─── Assemble LINE1 (Identity & State) ───────────────────────────────────────
 ACTIVE_SEGS=()
@@ -368,7 +362,7 @@ if [ -n "$USED_PCT" ]; then
   BADGE_LIST+=("\033[38;2;102;102;102m${ICON_CONTEXT_BAR}\033[0m \033[38;2;${ctx_color}m${PCT_FMT}%\033[0m")
 fi
 
-# 2. Token Details Badge (Option 1: Real Turn with Prompt Cache Awareness)
+# 2. Token Details Badge (Responsive & Cache-Aware)
 TURN_IN_FMT=$(human_format "$TURN_INPUT_TOKENS")
 TURN_CACHE_FMT=$(human_format "$TURN_CACHE_TOKENS")
 TURN_OUT_FMT=$(human_format "$TURN_OUTPUT_TOKENS")
@@ -378,7 +372,11 @@ CTX_LIMIT_FMT=$(human_format "$CTX_LIMIT")
 if [ "$TURN_INPUT_TOKENS" -gt 0 ] || [ "$TURN_OUTPUT_TOKENS" -gt 0 ]; then
   cache_str=""
   if [ "$TURN_CACHE_TOKENS" -gt 0 ]; then
-    cache_str=" \033[38;2;102;102;102m(${TURN_CACHE_FMT} cached)\033[0m"
+    if [ "$COLS" -lt 75 ] 2>/dev/null; then
+      cache_str=" \033[38;2;102;102;102m[${TURN_CACHE_FMT}⚡]\033[0m"
+    else
+      cache_str=" \033[38;2;102;102;102m(${TURN_CACHE_FMT} cached)\033[0m"
+    fi
   fi
   BADGE_LIST+=("\033[38;2;102;102;102mturn:\033[0m \033[38;2;194;194;176m${TURN_IN_FMT} in\033[0m${cache_str} \033[38;2;102;102;102m│\033[0m \033[38;2;194;194;176m${TURN_OUT_FMT} out\033[0m")
 elif [ "$CTX_USED" -gt 0 ] && [ "$CTX_LIMIT" -gt 0 ]; then
@@ -443,37 +441,86 @@ if [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; then
   qb="$(make_quota_bar "$Q_5H" "5H" "$Q_5H_R")"
   [ -n "$qb" ] && BADGE_LIST+=("$qb")
 fi
-if [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; then
+if [ "$COLS" -ge 95 ] 2>/dev/null && [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; then
   qb="$(make_quota_bar "$Q_WK" "7D" "$Q_WK_R")"
   [ -n "$qb" ] && BADGE_LIST+=("$qb")
 fi
 
-# ─── Dynamic Line Packing Routine ────────────────────────────────────────────
-PACKED_LINES=()
+# ─── Intelligent Multi-Line Packing ──────────────────────────────────────────
+line1_vis=$(visible_len "$LINE1")
+
+badges_vis=0
+badges_joined=""
+for ((i = 0; i < ${#BADGE_LIST[@]}; i++)); do
+  b="${BADGE_LIST[i]}"
+  [ -z "$b" ] && continue
+  bv=$(visible_len "$b")
+  if [ "$badges_vis" -eq 0 ]; then
+    badges_vis=$bv
+    badges_joined="$b"
+  else
+    badges_vis=$(( badges_vis + 3 + bv ))
+    badges_joined="${badges_joined} \033[38;2;102;102;102m│\033[0m ${b}"
+  fi
+done
+
+max_w=$(( COLS - 2 ))
+[ "$max_w" -lt 35 ] && max_w=35
+
+# 1. Single-Line Mode: If everything fits cleanly across terminal width
+if [ $(( line1_vis + 3 + badges_vis )) -le "$max_w" ]; then
+  if [ -n "$badges_joined" ]; then
+    echo -e " ${LINE1} \033[38;2;102;102;102m│\033[0m ${badges_joined}"
+  else
+    echo -e " ${LINE1}"
+  fi
+  exit 0
+fi
+
+# 2. Multi-Line Split-Pane Mode: Wrap without truncation
+if [ "$line1_vis" -le "$max_w" ]; then
+  echo -e " ${LINE1}"
+else
+  curr_line=""
+  curr_vis=0
+  for seg in "${ACTIVE_SEGS[@]}"; do
+    [ -z "$seg" ] && continue
+    s_vis=$(visible_len "$seg")
+    if [ -z "$curr_line" ]; then
+      curr_line="$seg"
+      curr_vis=$s_vis
+    elif [ $(( curr_vis + 3 + s_vis )) -le "$max_w" ]; then
+      curr_line="${curr_line} \033[38;2;102;102;102m│\033[0m ${seg}"
+      curr_vis=$(( curr_vis + 3 + s_vis ))
+    else
+      echo -e " ${curr_line}"
+      curr_line="$seg"
+      curr_vis=$s_vis
+    fi
+  done
+  [ -n "$curr_line" ] && echo -e " ${curr_line}"
+fi
+
 curr_line=""
 curr_vis=0
-max_vis=$(( COLS - 4 ))
-[ "$max_vis" -lt 40 ] && max_vis=40
 
 for badge in "${BADGE_LIST[@]}"; do
   [ -z "$badge" ] && continue
   b_vis=$(visible_len "$badge")
+  
   if [ -z "$curr_line" ]; then
     curr_line="$badge"
     curr_vis=$b_vis
-  elif [ $(( curr_vis + 3 + b_vis )) -le "$max_vis" ]; then
+  elif [ $(( curr_vis + 3 + b_vis )) -le "$max_w" ]; then
     curr_line="${curr_line} \033[38;2;102;102;102m│\033[0m ${badge}"
     curr_vis=$(( curr_vis + 3 + b_vis ))
   else
-    PACKED_LINES+=("$curr_line")
+    echo -e " ${curr_line}"
     curr_line="$badge"
     curr_vis=$b_vis
   fi
 done
-[ -n "$curr_line" ] && PACKED_LINES+=("$curr_line")
 
-out=" ${LINE1}"
-for ((i = 0; i < ${#PACKED_LINES[@]}; i++)); do
-  out="${out} \033[38;2;102;102;102m│\033[0m ${PACKED_LINES[i]}"
-done
-echo -e "$out"
+if [ -n "$curr_line" ]; then
+  echo -e " ${curr_line}"
+fi
