@@ -466,9 +466,25 @@ done
 BADGE_LIST=()
 
 # 1. Context Window Usage (Accurate conversation context & tokens)
-PCT_FMT=$(LC_NUMERIC=C printf "%.1f" "$USED_PCT" 2>/dev/null || echo "0.0")
-PCT_INT=${USED_PCT%.*}; PCT_INT=${PCT_INT:-0}
-if [ -n "$USED_PCT" ]; then
+ACTIVE_CTX_TOKENS="$CTX_USED"
+if [ "$TURN_INPUT_TOKENS" -gt "$ACTIVE_CTX_TOKENS" ] 2>/dev/null; then
+  ACTIVE_CTX_TOKENS="$TURN_INPUT_TOKENS"
+fi
+
+if [ "$CTX_LIMIT" -gt 0 ] 2>/dev/null && [ "$ACTIVE_CTX_TOKENS" -gt 0 ] 2>/dev/null; then
+  calc_tenth=$(( (ACTIVE_CTX_TOKENS * 1000) / CTX_LIMIT ))
+  if [ "$calc_tenth" -lt 10 ]; then
+    PCT_FMT="0.${calc_tenth}"
+  else
+    PCT_FMT="${calc_tenth%?}.${calc_tenth: -1}"
+  fi
+  PCT_INT=$(( ACTIVE_CTX_TOKENS * 100 / CTX_LIMIT ))
+else
+  PCT_FMT=$(LC_NUMERIC=C printf "%.1f" "$USED_PCT" 2>/dev/null || echo "0.0")
+  PCT_INT=${USED_PCT%.*}; PCT_INT=${PCT_INT:-0}
+fi
+
+if [ -n "$PCT_FMT" ]; then
   ctx_color="${C_PRIMARY}"
   if [ "$PCT_INT" -ge 80 ]; then
     ctx_color="${C_DANGER}"
@@ -476,11 +492,11 @@ if [ -n "$USED_PCT" ]; then
     ctx_color="${C_WARN}"
   fi
 
-  ctx_used_fmt=$(human_format "$CTX_USED")
+  ctx_used_fmt=$(human_format "$ACTIVE_CTX_TOKENS")
   ctx_limit_fmt=$(human_format "$CTX_LIMIT")
 
   ctx_detail=""
-  if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
+  if [ "$ACTIVE_CTX_TOKENS" -gt 0 ] 2>/dev/null; then
     if [ "$COLS" -ge 120 ] 2>/dev/null && [ "$CTX_LIMIT" -gt 0 ] 2>/dev/null; then
       ctx_detail=" ${C_MUTED}(${ctx_used_fmt}/${ctx_limit_fmt})${C_RESET}"
     elif [ "$COLS" -ge 85 ] 2>/dev/null; then
