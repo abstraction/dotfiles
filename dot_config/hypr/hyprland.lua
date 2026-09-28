@@ -40,3 +40,15 @@ o.window({ class = "^wispr-flow$", title = "^(Status|Flow Status Indicator)$" },
   suppress_event = "activate activatefocus",
   move = { 20, 350 },
 })
+
+-- Fix video playback in Hybrid mode by explicitly overriding the Omarchy NVIDIA defaults
+local handle = io.popen("supergfxctl -g 2>/dev/null")
+if handle then
+  local mode = handle:read("*a"):match("^%s*(.-)%s*$")
+  handle:close()
+  if mode == "Hybrid" or mode == "Integrated" then
+    hl.env("LIBVA_DRIVER_NAME", "iHD")
+    hl.env("__GLX_VENDOR_LIBRARY_NAME", "")
+    hl.env("NVD_BACKEND", "")
+  end
+end

@@ -14,11 +14,15 @@ source "$OMARCHY_PATH/default/bash/rc"
 # alias p='python'
 alias acm='agy-cli-manager'
 alias agyd='agy --dangerously-skip-permissions'
+alias agyds='agy --dangerously-skip-permissions && specstory sync --no-cloud-sync'
 alias bsh='nvim ~/.bashrc'
 alias rbsh='source ~/.bashrc'
 alias ze='zeditor'
 
 export SSH_AUTH_SOCK=$HOME/.bitwarden-ssh-agent.sock
+
+# Set up Atuin for magical shell history
+eval "$(atuin init bash)"
 
 # pnpm
 export PNPM_HOME="/home/seren/.local/share/pnpm"
@@ -33,7 +37,7 @@ export PATH="/home/seren/.local/bin:$PATH"
 
 # Specstory offline aliases
 alias ssync="specstory sync --no-cloud-sync"
-alias sclaude="specstory run --no-cloud-sync claude"
-sagy() {
-  specstory run --no-cloud-sync antigravity -c "agy --dangerously-skip-permissions $*"
-}
+# alias sclaude="specstory run --no-cloud-sync claude"
+# sagy() {
+#   specstory run --no-cloud-sync antigravity -c "agy --dangerously-skip-permissions $*"
+# }
