@@ -14,7 +14,7 @@ BarWidget {
   id: root
   moduleName: "seren.clock"
 
-  property date displayDate: clock.date
+  property date displayDate: root.now
 
   readonly property string configuredFormat: vertical
     ? setting("verticalFormat", "HH\n—\nmm")
@@ -61,133 +61,43 @@ BarWidget {
     return Qt.formatDateTime(date, activeFormat.replace(/ww/g, Model.isoWeekLiteral(date.getFullYear(), date.getMonth(), date.getDate())))
   }
 
-  // ---- Calendar popup. Shape contract for shell.summon/hide/toggle
-  //      routing: Bar.findPanelWidget requires open/close/opened on the
-  //      bar-widget root.
-  readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
-
-  function open() {
-    if (panelLoader.item) panelLoader.item.open()
-  }
-
-  function close() {
-    if (panelLoader.item) panelLoader.item.close()
-  }
-
-  function togglePanel() {
-    if (panelLoader.item) panelLoader.item.toggle()
-  }
-
-  function toggleWeekStart() {
-    if (panelLoader.item) panelLoader.item.toggleWeekStart()
-  }
-
-  // The clock fills more slot than it paints a mark for, at both
-  // orientations: horizontally it is a text label in a padded slot, so the
-  // dot takes the label width; vertically it is a stack of icon-sized lines,
-  // so the dot takes one line — the same mark every icon widget gets, rather
-  // than a rule running the height of the whole stack.
+  readonly property bool opened: false
   readonly property real openPanelIndicatorWidth: root.implicitWidth
   readonly property real openPanelIndicatorHeight: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
-
-  // Forwarded so this widget can stand in for the panel as the bar's popout
-  // identity: Bar.requestPopout prefers closeForPopoutSwitch over close, and
-  // KeyboardPanel reads popoutSwitchClosing back off its owner.
-  readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
-
-  function closeForPopoutSwitch() {
-    if (panelLoader.item) panelLoader.item.closeForPopoutSwitch()
-  }
-
-  function injectPanel() {
-    var target = panelLoader.item
-    if (!target) return
-    if ("bar" in target) target.bar = root.bar
-    if ("settings" in target) target.settings = root.settings
-    if ("anchorItem" in target) target.anchorItem = button
-    if ("hostWidget" in target) target.hostWidget = root
-  }
+  readonly property bool popoutSwitchClosing: false
 
   implicitWidth: root.vertical ? button.implicitWidth : button.implicitWidth + (lifeBarItem.visible ? lifeBarItem.anchors.leftMargin + lifeBarItem.width + Style.space(20) : 0)
   implicitHeight: button.implicitHeight
-
-  onBarChanged: injectPanel()
-  onSettingsChanged: injectPanel()
-
-  SystemClock {
-    id: clock
-    precision: SystemClock.Minutes
-    onDateChanged: root.displayDate = date
-  }
-
-  Loader {
-    id: panelLoader
-    active: true
-    source: Qt.resolvedUrl("Panel.qml")
-    visible: false
-    onLoaded: {
-      root.injectPanel()
-      Qt.callLater(root.injectPanel)
-    }
-  }
-
-  IpcHandler {
-    target: "seren.clock"
-
-    function refresh(): void { root.broadcast("refresh") }
-    function cycleFormat(): void { root.cycleFormat() }
-    function toggleWeekStart(): void { root.toggleWeekStart() }
-    function open(): void { root.open() }
-    function close(): void { root.close() }
-    function show(): void { root.open() }
-    function hide(): void { root.close() }
-    function toggle(): void { root.togglePanel() }
-  }
 
   WidgetButton {
     id: button
     anchors.left: parent.left
     anchors.top: parent.top
     bar: root.bar
-    text: root.vertical ? "" : root.displayText
-    labelVisible: !root.vertical
-    hasVisualContent: root.vertical ? root.verticalLines.length > 0 : text !== ""
-    fixedHeight: root.vertical ? root.verticalLines.length * Style.bar.iconSlot : -1
-    horizontalMargin: 8.75
-    verticalPadding: 8.75
-
-    onPressed: function(b) {
-      if (b === Qt.RightButton) root.cycleFormat()
-      else if (b === Qt.MiddleButton) { if (root.bar) root.bar.run("omarchy-menu-timezone") }
-      else root.togglePanel()
-    }
-
-    Column {
-      visible: root.vertical
-      anchors.fill: parent
-
-      Repeater {
-        model: root.verticalLines
-
-        OpticalGlyph {
-          required property string modelData
-          width: button.width
-          height: Style.bar.iconSlot
-          text: modelData
-          fontFamily: button.fontFamily
-          fontSize: modelData.length > 3
-            ? button.fontSize * 0.9
-            : button.fontSize
-          color: button.foreground
-        }
-      }
-    }
+    text: ""
+    labelVisible: false
+    hasVisualContent: false
+    fixedHeight: -1
+    horizontalMargin: 0
+    verticalPadding: 0
   }
 
-  readonly property date startDate: setting("startDate", "") === "" ? new Date("2026-09-23T00:00:00") : new Date(setting("startDate", ""))
+  property date now: new Date()
+  Timer {
+    running: true
+    repeat: true
+    interval: 47
+    onTriggered: root.now = new Date()
+  }
+
+  readonly property int currentYear: root.now.getFullYear()
+  readonly property date startDate: new Date(currentYear, 0, 1)
+  readonly property date targetDate: new Date(currentYear, 11, 31, 23, 59, 59)
+  readonly property int totalDays: Math.ceil((targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
   readonly property int daysEndured: Math.max(0, Math.floor((root.displayDate - startDate) / (1000 * 60 * 60 * 24)))
-  readonly property int totalDays: 365
   readonly property real progress: Math.min(1.0, daysEndured / totalDays)
+  readonly property real exactDaysLeft: Math.max(0, (targetDate.getTime() - root.now.getTime()) / (1000 * 60 * 60 * 24))
+  readonly property string exactDaysLeftStr: exactDaysLeft.toFixed(7)
 
   Item {
     id: lifeBarItem
@@ -201,9 +111,20 @@ BarWidget {
     Row {
       id: innerRow
       anchors.verticalCenter: parent.verticalCenter
-      spacing: Style.space(8)
+      spacing: Style.space(12)
 
-      // The Kintsugi/Gold Accumulation Line
+      // Past: Days Endured
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: "DAY " + (root.daysEndured + 1) + " OF " + root.totalDays
+        color: Color.accent
+        font.family: root.bar ? root.bar.fontFamily : "sans-serif"
+        font.pixelSize: Style.font.bodySmall
+        font.letterSpacing: 1
+        font.bold: true
+      }
+
+      // Present: The Bridge
       Item {
         anchors.verticalCenter: parent.verticalCenter
         width: Style.space(80)
@@ -219,16 +140,16 @@ BarWidget {
           width: Math.max(height, parent.width * root.progress)
           height: parent.height
           radius: height / 2
-          color: "#D4AF37" // Liquid Gold
+          color: Color.accent // Dynamic Theme Color
           
           // Glowing leading edge (The Spark)
           Rectangle {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: Style.space(6)
-            height: Style.space(6)
-            radius: width / 2
-            color: "#FFFACD" // Radiant Yellow
+            width: parent.height // Exact same size as bar height (no bulge)
+            height: parent.height
+            radius: height / 2
+            color: Qt.lighter(Color.accent, 1.4) // Core spark
             
             SequentialAnimation on opacity {
               loops: Animation.Infinite
@@ -238,56 +159,17 @@ BarWidget {
           }
         }
       }
-      
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: "DAY " + (root.daysEndured + 1) + " OF 365"
-        color: "#D4AF37"
-        font.family: root.bar ? root.bar.fontFamily : "sans-serif"
-        font.pixelSize: Style.font.bodySmall
-        font.letterSpacing: 1
-        font.bold: true
-      }
 
+      // Future: Days Left
       Text {
         anchors.verticalCenter: parent.verticalCenter
-        text: "•"
-        color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.4)
-        font.family: root.bar ? root.bar.fontFamily : "sans-serif"
+        text: root.exactDaysLeftStr + " DAYS LEFT"
+        color: button.foreground
+        font.family: root.bar ? root.bar.fontFamily : "monospace"
         font.pixelSize: Style.font.bodySmall
-        font.bold: true
-      }
-
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: (root.totalDays - (root.daysEndured + 1)) + " LEFT"
-        color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.5)
-        font.family: root.bar ? root.bar.fontFamily : "sans-serif"
-        font.pixelSize: Style.font.bodySmall
-        font.letterSpacing: 1
         font.bold: true
       }
     }
     
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: root.togglePanel()
-    }
-  }
-
-  Rectangle {
-    visible: !root.vertical && opacity > 0
-    opacity: root.opened ? 0.9 : 0
-    color: Color.accent
-    radius: Math.min(width, height) / 2
-    width: button.labelWidth
-    height: Style.space(2)
-    x: button.x + (button.width - width) / 2
-    y: root.bar && root.bar.position === "top" ? parent.height - height - Style.space(2) : Style.space(2)
-    z: 50
-    Behavior on opacity {
-      NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-    }
   }
 }

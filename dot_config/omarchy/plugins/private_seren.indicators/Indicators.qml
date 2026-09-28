@@ -161,7 +161,7 @@ BarWidget {
 
   implicitWidth: root.vertical
     ? activeVerticalBlock.implicitWidth
-    : activeHorizontalBlock.implicitWidth
+    : activeHorizontalBlock.implicitWidth + inactiveHorizontalArea.implicitWidth
   implicitHeight: root.vertical
     ? activeVerticalBlock.implicitHeight
     : activeHorizontalBlock.implicitHeight
@@ -185,10 +185,10 @@ BarWidget {
 
   Component.onCompleted: root.refreshRequested()
 
-  Item {
+  Row {
     id: horizontalIndicators
-    width: activeHorizontalBlock.implicitWidth
-    height: activeHorizontalBlock.implicitHeight
+    width: activeHorizontalBlock.implicitWidth + inactiveHorizontalArea.implicitWidth
+    height: Math.max(activeHorizontalBlock.implicitHeight, inactiveHorizontalArea.implicitHeight)
 
     visible: !root.vertical
 
@@ -199,7 +199,6 @@ BarWidget {
 
     Item {
       id: inactiveHorizontalArea
-      anchors.right: activeHorizontalBlock.left
       anchors.verticalCenter: parent.verticalCenter
 
       implicitWidth: root.revealInactiveIndicators ? inactiveHorizontalBlock.implicitWidth : 0

@@ -1,26 +1,11 @@
 {
   "bar": {
-    "centerAnchor": "omarchy.clock",
+    "centerAnchor": "seren.clock",
     "layout": {
       "center": [
         {
-          "id": "seren.indicators"
-        },
-        {
           "startDate": "2026-08-01T00:00:00",
-          "format": "ddd MM-dd HH:mm",
-          "formatAlt": "d MMMM 'W'ww yyyy",
-          "id": "seren.clock",
-          "verticalFormat": "HH\n—\nmm"
-        },
-        {
-          "id": "omarchy.keyboard-layout"
-        },
-        {
-          "id": "omarchy.weather"
-        },
-        {
-          "id": "omarchy.system-update"
+          "id": "seren.clock"
         }
       ],
       "left": [
@@ -33,7 +18,19 @@
       ],
       "right": [
         {
+          "id": "seren.indicators"
+        },
+        {
           "id": "omarchy.tray"
+        },
+        {
+          "id": "omarchy.keyboard-layout"
+        },
+        {
+          "id": "seren.weather"
+        },
+        {
+          "id": "omarchy.system-update"
         },
         {
           "id": "omarchy.agents"
@@ -52,6 +49,15 @@
         },
         {
           "id": "omarchy.power"
+        },
+        {
+          "badge": "None",
+          "id": "jankeesvw.notification-center"
+        },
+        {
+          "id": "omarchy.clock",
+          "format": "ddd MM-dd HH:mm",
+          "formatAlt": "d MMMM 'W'ww yyyy"
         }
       ]
     },
