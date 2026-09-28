@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""
+omarchy-reset-modifiers
+Resets stuck modifier keys (Ctrl, Alt, Shift, Super), restarts wispr-flow helper,
+and triggers audio/OSD user feedback.
+"""
+
+import os
+import subprocess
+import struct
+import time
+import fcntl
+import sys
+
+def notify_user():
+    # 1. Audible chime (async)
+    try:
+        subprocess.Popen(["canberra-gtk-play", "-i", "bell"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+    # 2. Visual Quickshell OSD HUD (async)
+    try:
+        subprocess.Popen(["omarchy-osd", "-i", "input-keyboard", "-m", "Modifiers Reset", "-d", "1500"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+    # 3. Notification (async)
+    try:
+        subprocess.Popen([
+            "omarchy-notification-send", "-u", "low", "-g", "󰌌",
+            "Keyboard Reset", "Wispr helper restarted & modifiers cleared."
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+def kill_wispr_helper():
+    try:
+        subprocess.run(["killall", "-9", "wispr-flow-linux-helper"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+def cycle_wayland_modifiers():
+    # Pulse keypress + keyrelease through Wayland virtual keyboard protocol
+    keys = [
+        "Control_L", "Control_R",
+        "Alt_L", "Alt_R",
+        "Shift_L", "Shift_R",
+        "Super_L", "Super_R"
+    ]
+    wtype_args = ["wtype"]
+    for k in keys:
+        wtype_args.extend(["-k", k])
+    for k in keys:
+        wtype_args.extend(["-p", k])
+
+    try:
+        subprocess.run(wtype_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+def cycle_uinput_modifiers():
+    UI_SET_EVBIT = 0x40045564
+    UI_SET_KEYBIT = 0x40045565
+    UI_DEV_SETUP = 0x405c5503
+    UI_DEV_CREATE = 0x5501
+    UI_DEV_DESTROY = 0x5502
+
+    EV_SYN = 0
+    EV_KEY = 1
+    SYN_REPORT = 0
+
+    MOD_KEYS = [29, 97, 42, 54, 56, 100, 125, 126, 58]
+
+    try:
+        fd = os.open("/dev/uinput", os.O_WRONLY | os.O_NONBLOCK)
+    except Exception:
+        return
+
+    try:
+        fcntl.ioctl(fd, UI_SET_EVBIT, EV_KEY)
+        fcntl.ioctl(fd, UI_SET_EVBIT, EV_SYN)
+        for k in MOD_KEYS:
+            fcntl.ioctl(fd, UI_SET_KEYBIT, k)
+
+        id_data = struct.pack("HHHH", 0x03, 0x1234, 0x5678, 0x01)
+        name = b"Modifier Reset Device\x00".ljust(80, b"\x00")
+        setup = id_data + name + struct.pack("I", 0)
+        fcntl.ioctl(fd, UI_DEV_SETUP, setup)
+        fcntl.ioctl(fd, UI_DEV_CREATE)
+
+        time.sleep(0.01)
+
+        def emit(code, val):
+            ev = struct.pack("qqHHi", 0, 0, EV_KEY, code, val)
+            os.write(fd, ev)
+            syn = struct.pack("qqHHi", 0, 0, EV_SYN, SYN_REPORT, 0)
+            os.write(fd, syn)
+
+        # Pulse press and release
+        for k in MOD_KEYS:
+            emit(k, 1)
+            emit(k, 0)
+
+        time.sleep(0.01)
+        fcntl.ioctl(fd, UI_DEV_DESTROY)
+    except Exception:
+        pass
+    finally:
+        os.close(fd)
+
+def main():
+    notify_user()
+    kill_wispr_helper()
+    cycle_wayland_modifiers()
+    cycle_uinput_modifiers()
+
+if __name__ == "__main__":
+    main()
