@@ -42,5 +42,16 @@ mechanism, read the skill files directly and follow them instead:
 PROMPT
 )
 
-# Open Antigravity CLI in a new terminal window
-xdg-terminal-exec agy -i "$prompt"
+# Launch the agy processor in herdr in the specific directory
+target_cwd="/home/seren/my/think/operating-sys"
+workspace_json=$(herdr workspace create --cwd "$target_cwd" --label "Crash: $comm" --focus 2>/dev/null || echo '{"result":{"root_pane":{"pane_id":"null"}}}')
+pane_id=$(echo "$workspace_json" | jq -r '.result.root_pane.pane_id')
+
+if [[ -n "$pane_id" && "$pane_id" != "null" ]]; then
+  agent_name="crash-$pid"
+  herdr agent start "$agent_name" --kind agy --pane "$pane_id" -- --model gemini-3.8-flash-high --effort high
+  herdr agent prompt "$agent_name" "$prompt"
+else
+  # Fallback if herdr fails
+  cd "$target_cwd" && xdg-terminal-exec agy --model gemini-3.8-flash-high --effort high -i "$prompt"
+fi
