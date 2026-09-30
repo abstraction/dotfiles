@@ -15,6 +15,7 @@ source "$OMARCHY_PATH/default/bash/rc"
 alias acm='agy-cli-manager'
 alias agyd='agy --dangerously-skip-permissions'
 alias agyds='agy --dangerously-skip-permissions && specstory sync --no-cloud-sync'
+alias agys='agy && specstory sync --no-cloud-sync'
 alias bsh='nvim ~/.bashrc'
 alias rbsh='source ~/.bashrc'
 alias ze='zeditor'
