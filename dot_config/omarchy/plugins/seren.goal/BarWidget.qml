@@ -98,6 +98,8 @@ BarWidget {
   readonly property real progress: Math.min(1.0, daysEndured / totalDays)
   readonly property real exactDaysLeft: Math.max(0, (targetDate.getTime() - root.now.getTime()) / (1000 * 60 * 60 * 24))
   readonly property string exactDaysLeftStr: exactDaysLeft.toFixed(7)
+  readonly property string exactDaysLeftInt: Math.floor(exactDaysLeft).toString()
+  readonly property string exactDaysLeftDec: (exactDaysLeft - Math.floor(exactDaysLeft)).toFixed(7).substring(1)
 
   Item {
     id: lifeBarItem
@@ -111,91 +113,75 @@ BarWidget {
     Row {
       id: innerRow
       anchors.verticalCenter: parent.verticalCenter
-      spacing: Style.space(8)
+      spacing: Style.space(16)
 
-      // The Kintsugi/Gold Accumulation Line
-      Item {
+      // 1. The Monolith: High-Contrast Ticking (Left side)
+      Row {
         anchors.verticalCenter: parent.verticalCenter
-        width: Style.space(80)
-        height: Style.space(4)
-
-        Rectangle {
-          anchors.fill: parent
-          radius: height / 2
-          color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.1)
+        
+        Text {
+          anchors.bottom: parent.bottom
+          text: root.exactDaysLeftInt
+          color: button.foreground
+          font.family: root.bar ? root.bar.fontFamily : "sans-serif"
+          font.pixelSize: Style.font.bodySmall * 1.75
+          font.bold: true
         }
+        
+        Text {
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: Style.space(1)
+          text: root.exactDaysLeftDec
+          color: button.foreground // FULL OPACITY, HIGH CONTRAST
+          font.family: "monospace"
+          font.pixelSize: Style.font.bodySmall * 1.4 // Made bigger to demand attention
+          font.bold: true
+        }
+        
+        Text {
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: Style.space(2)
+          text: " DAYS LEFT"
+          color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.7) // Slightly muted so the numbers pop
+          font.family: root.bar ? root.bar.fontFamily : "sans-serif"
+          font.pixelSize: Style.font.bodySmall
+          font.letterSpacing: 1
+          font.bold: true
+        }
+      }
 
-        Rectangle {
-          width: Math.max(height, parent.width * root.progress)
-          height: parent.height
-          radius: height / 2
-          color: Color.accent // Dynamic Theme Color
-          
-          // Glowing leading edge (The Spark)
+      // 2. The Ledger: De-emphasized, thin slices (Right side)
+      Row {
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(3)
+        
+        Repeater {
+          model: 12
           Rectangle {
-            anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: Style.space(10)
-            height: Style.space(10)
-            radius: width / 2
-            color: Qt.lighter(Color.accent, 1.4) // Core spark
+            width: Style.space(4) // MUCH thinner
+            height: Style.space(12) // Cropped down
+            radius: 0
             
-            SequentialAnimation on opacity {
-              loops: Animation.Infinite
-              NumberAnimation { to: 0.3; duration: 2000; easing.type: Easing.InOutSine }
-              NumberAnimation { to: 1.0; duration: 2000; easing.type: Easing.InOutSine }
-            }
-
-            // The Halo Glow
+            readonly property real boxThreshold: index / 12.0
+            readonly property real nextBoxThreshold: (index + 1) / 12.0
+            readonly property bool isPassed: root.progress >= nextBoxThreshold
+            readonly property bool isCurrent: root.progress >= boxThreshold && root.progress < nextBoxThreshold
+            
+            color: "transparent"
+            border.width: Style.space(1)
+            border.color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.2) // Very dim borders
+            
+            // The gradual fill (momentum)
             Rectangle {
-              anchors.centerIn: parent
-              width: parent.width * 2
-              height: parent.height * 2
-              radius: width / 2
-              color: Color.accent
-              opacity: 0.3
-              z: -1
+              anchors.left: parent.left
+              anchors.top: parent.top
+              height: parent.height
+              width: isPassed ? parent.width : (isCurrent ? parent.width * ((root.progress - boxThreshold) / (1.0 / 12.0)) : 0)
+              color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.4) // Muted fill so it doesn't overpower the numbers
             }
           }
         }
-      }
-      
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: "DAY " + (root.daysEndured + 1) + " OF " + root.totalDays
-        color: Color.accent
-        font.family: root.bar ? root.bar.fontFamily : "sans-serif"
-        font.pixelSize: Style.font.bodySmall
-        font.letterSpacing: 1
-        font.bold: true
-      }
-
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: "•"
-        color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.4)
-        font.family: root.bar ? root.bar.fontFamily : "sans-serif"
-        font.pixelSize: Style.font.bodySmall
-        font.bold: true
-      }
-
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: root.exactDaysLeftStr
-        color: button.foreground
-        font.family: "monospace"
-        font.pixelSize: Style.font.bodySmall
-        font.bold: true
-      }
-
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: "DAYS LEFT"
-        color: Qt.rgba(button.foreground.r, button.foreground.g, button.foreground.b, 0.5)
-        font.family: root.bar ? root.bar.fontFamily : "sans-serif"
-        font.pixelSize: Style.font.bodySmall
-        font.letterSpacing: 1
-        font.bold: true
       }
     }
     
