@@ -232,8 +232,6 @@ BarWidget {
 
     ActiveIndicatorBlock {
       id: activeHorizontalBlock
-      anchors.right: parent.right
-      anchors.verticalCenter: parent.verticalCenter
       indicatorsModule: root
       indicatorModel: activeIndicatorModel
       horizontal: true

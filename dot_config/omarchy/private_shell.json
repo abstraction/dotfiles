@@ -13,7 +13,7 @@
           "id": "omarchy.menu"
         },
         {
-          "id": "omarchy.workspaces"
+          "id": "seren.workspaces"
         }
       ],
       "right": [
@@ -22,6 +22,9 @@
         },
         {
           "id": "omarchy.tray"
+        },
+        {
+          "id": "crmne.hyprmoncfg"
         },
         {
           "id": "omarchy.keyboard-layout"
