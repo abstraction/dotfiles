@@ -13,8 +13,8 @@ C_PRIMARY="\033[0m"       # Theme default foreground (model, cwd, healthy metric
 C_SUCCESS="\033[32m"      # Theme green (READY state)
 C_INFO="\033[36m"         # Theme cyan/aqua (WORKING state)
 C_THINK="\033[35m"        # Theme purple/magenta (THINKING state)
-C_WARN="\033[33m"         # Theme yellow/amber (TOOL state, quota < 20%, dirty git)
-C_DANGER="\033[31m"       # Theme red/coral (critical quota < 5%, high context >= 80%)
+C_WARN="\033[33m"         # Theme yellow/amber (TOOL state, quota < 20%, dirty git, context >= 40% or >= 80k tokens)
+C_DANGER="\033[31m"       # Theme red/coral (critical quota < 5%, high context >= 60% or >= 100k tokens)
 DIVIDER="${C_MUTED}│${C_RESET}"
 
 for arg in "$@"; do
@@ -486,9 +486,9 @@ fi
 
 if [ -n "$PCT_FMT" ]; then
   ctx_color="${C_PRIMARY}"
-  if [ "$PCT_INT" -ge 80 ]; then
+  if [ "$ACTIVE_CTX_TOKENS" -ge 100000 ] 2>/dev/null || [ "$PCT_INT" -ge 60 ]; then
     ctx_color="${C_DANGER}"
-  elif [ "$PCT_INT" -ge 50 ]; then
+  elif [ "$ACTIVE_CTX_TOKENS" -ge 80000 ] 2>/dev/null || [ "$PCT_INT" -ge 40 ]; then
     ctx_color="${C_WARN}"
   fi
 
@@ -497,10 +497,14 @@ if [ -n "$PCT_FMT" ]; then
 
   ctx_detail=""
   if [ "$ACTIVE_CTX_TOKENS" -gt 0 ] 2>/dev/null; then
+    detail_color="${C_MUTED}"
+    if [ "$ctx_color" != "${C_PRIMARY}" ]; then
+      detail_color="${ctx_color}"
+    fi
     if [ "$COLS" -ge 120 ] 2>/dev/null && [ "$CTX_LIMIT" -gt 0 ] 2>/dev/null; then
-      ctx_detail=" ${C_MUTED}(${ctx_used_fmt}/${ctx_limit_fmt})${C_RESET}"
+      ctx_detail=" ${detail_color}(${ctx_used_fmt}/${ctx_limit_fmt})${C_RESET}"
     elif [ "$COLS" -ge 85 ] 2>/dev/null; then
-      ctx_detail=" ${C_MUTED}(${ctx_used_fmt})${C_RESET}"
+      ctx_detail=" ${detail_color}(${ctx_used_fmt})${C_RESET}"
     fi
   fi
 
