@@ -1,0 +1,38 @@
+{
+  // Theme and Appearance
+  "workbench.colorTheme": "Omarchy",
+
+  // Application Updates
+  // Handled by system package manager (pacman/yay)
+  "update.mode": "none",
+
+  // Startup and Window Layout
+  "workbench.startupEditor": "none",
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
+  "workbench.activityBar.compact": true,
+
+  // Text Formatting and Editing
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "editor.autoIndentOnPaste": true,
+  "editor.wordWrap": "wordWrapColumn",
+
+  // AI Features
+  "chat.disableAIFeatures": true,
+
+  // File Explorer
+  "explorer.compactFolders": false,
+  "explorer.confirmDelete": false,
+
+  // Markdown Preview Rules
+  // Open markdown files directly in preview mode
+  "workbench.editorAssociations": {
+    "*.md": "vscode.markdown.preview.editor"
+  },
+  // Open markdown diffs in the standard text comparison editor
+  "workbench.diffEditorAssociations": {
+    "*.md": "default"
+  },
+  // Markdown preview display font size
+  "markdown.preview.fontSize": 18
+}
