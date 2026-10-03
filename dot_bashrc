@@ -12,10 +12,14 @@ source "$OMARCHY_PATH/default/bash/rc"
 #
 # Make an alias for invoking commands you use constantly
 # alias p='python'
-alias acm='agy-cli-manager'
+alias acs='antigravity-cli-switcher'
 alias agyd='agy --dangerously-skip-permissions'
 alias agyds='agy --dangerously-skip-permissions && specstory sync --no-cloud-sync'
-alias agys='agy && specstory sync --no-cloud-sync'
+
+unalias agys 2>/dev/null
+agys() {
+  agy "$@" && specstory sync --no-cloud-sync
+}
 alias bsh='nvim ~/.bashrc'
 alias rbsh='source ~/.bashrc'
 alias ze='zeditor'
