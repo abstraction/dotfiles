@@ -12,7 +12,7 @@ source "$OMARCHY_PATH/default/bash/rc"
 #
 # Make an alias for invoking commands you use constantly
 # alias p='python'
-alias acs='antigravity-cli-switcher'
+unalias acs 2>/dev/null
 alias agyd='agy --dangerously-skip-permissions'
 alias agyds='agy --dangerously-skip-permissions && specstory sync --no-cloud-sync'
 
