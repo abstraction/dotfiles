@@ -14,12 +14,12 @@
         },
         {
           "id": "seren.workspaces"
+        },
+        {
+          "id": "seren.workrave"
         }
       ],
       "right": [
-        {
-          "id": "seren.workrave"
-        },
         {
           "id": "seren.indicators"
         },

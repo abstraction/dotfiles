@@ -26,33 +26,107 @@ def execute_action(action: str):
             core_obj = bus.get_object(BUS_NAME, CORE_PATH)
             core = dbus.Interface(core_obj, CORE_IFACE)
             core.SetOperationMode(mode)
+            if mode in ("suspended", "quiet"):
+                try:
+                    core.SkipBreak("microbreak")
+                except Exception:
+                    pass
+                try:
+                    core.SkipBreak("restbreak")
+                except Exception:
+                    pass
             print(f"Set mode to {mode}")
+        elif action.startswith("usage_"):
+            usage = action[len("usage_"):]
+            core_obj = bus.get_object(BUS_NAME, CORE_PATH)
+            core = dbus.Interface(core_obj, CORE_IFACE)
+            core.SetUsageMode(usage)
+            print(f"Set usage mode to {usage}")
+        elif action == "toggle_reading":
+            core_obj = bus.get_object(BUS_NAME, CORE_PATH)
+            core = dbus.Interface(core_obj, CORE_IFACE)
+            cur = str(core.GetUsageMode())
+            new_mode = "reading" if cur != "reading" else "normal"
+            core.SetUsageMode(new_mode)
+            print(f"Toggled usage mode to {new_mode}")
+        elif action.startswith("timed_"):
+            # timed_suspended_30, timed_quiet_60, etc.
+            parts = action.split("_")
+            if len(parts) >= 3:
+                mode_type = parts[1]
+                duration = parts[2]
+                ui_obj = bus.get_object(BUS_NAME, UI_PATH)
+                ui = dbus.Interface(ui_obj, UI_IFACE)
+                menu_action = f"workrave.mode_timed_{mode_type}.{duration}"
+                ui.MenuAction(menu_action)
+                print(f"Executed {menu_action}")
+        elif action == "activity":
+            core_obj = bus.get_object(BUS_NAME, CORE_PATH)
+            core = dbus.Interface(core_obj, CORE_IFACE)
+            core.ReportActivity("mouse", True)
+            print("Reported activity")
         elif action in ("open", "preferences", "restbreak", "exercises", "statistics", "about", "quit"):
             ui_obj = bus.get_object(BUS_NAME, UI_PATH)
             ui = dbus.Interface(ui_obj, UI_IFACE)
             menu_action = f"workrave.{action}"
             ui.MenuAction(menu_action)
             print(f"Executed {menu_action}")
-        elif action == "skip_microbreak":
+        elif action in ("skip_current", "skip_microbreak", "skip_restbreak"):
             core_obj = bus.get_object(BUS_NAME, CORE_PATH)
             core = dbus.Interface(core_obj, CORE_IFACE)
-            core.SkipBreak("microbreak")
-            print("Skipped microbreak")
-        elif action == "postpone_microbreak":
+            if action == "skip_microbreak":
+                core.SkipBreak("microbreak")
+                print("Skipped microbreak")
+            elif action == "skip_restbreak":
+                core.SkipBreak("restbreak")
+                print("Skipped restbreak")
+            else:
+                m_state = str(core.GetBreakState("microbreak"))
+                r_state = str(core.GetBreakState("restbreak"))
+                if m_state not in ("", "none"):
+                    core.SkipBreak("microbreak")
+                    print("Skipped microbreak")
+                elif r_state not in ("", "none"):
+                    core.SkipBreak("restbreak")
+                    print("Skipped restbreak")
+                else:
+                    try:
+                        core.SkipBreak("microbreak")
+                    except Exception:
+                        pass
+                    try:
+                        core.SkipBreak("restbreak")
+                    except Exception:
+                        pass
+                    print("Skipped active breaks")
+        elif action in ("postpone_current", "postpone_microbreak", "postpone_restbreak"):
             core_obj = bus.get_object(BUS_NAME, CORE_PATH)
             core = dbus.Interface(core_obj, CORE_IFACE)
-            core.PostponeBreak("microbreak")
-            print("Postponed microbreak")
-        elif action == "skip_restbreak":
-            core_obj = bus.get_object(BUS_NAME, CORE_PATH)
-            core = dbus.Interface(core_obj, CORE_IFACE)
-            core.SkipBreak("restbreak")
-            print("Skipped restbreak")
-        elif action == "postpone_restbreak":
-            core_obj = bus.get_object(BUS_NAME, CORE_PATH)
-            core = dbus.Interface(core_obj, CORE_IFACE)
-            core.PostponeBreak("restbreak")
-            print("Postponed restbreak")
+            if action == "postpone_microbreak":
+                core.PostponeBreak("microbreak")
+                print("Postponed microbreak")
+            elif action == "postpone_restbreak":
+                core.PostponeBreak("restbreak")
+                print("Postponed restbreak")
+            else:
+                m_state = str(core.GetBreakState("microbreak"))
+                r_state = str(core.GetBreakState("restbreak"))
+                if m_state not in ("", "none"):
+                    core.PostponeBreak("microbreak")
+                    print("Postponed microbreak")
+                elif r_state not in ("", "none"):
+                    core.PostponeBreak("restbreak")
+                    print("Postponed restbreak")
+                else:
+                    try:
+                        core.PostponeBreak("microbreak")
+                    except Exception:
+                        pass
+                    try:
+                        core.PostponeBreak("restbreak")
+                    except Exception:
+                        pass
+                    print("Postponed active breaks")
         else:
             print(f"Unknown action: {action}", file=sys.stderr)
             sys.exit(1)
@@ -71,11 +145,36 @@ class WorkraveMonitor:
         self.ui_iface = None
         self.timer_receiver = None
         self.mode_receiver = None
+        self.usage_receiver = None
+        self.break_skipped_receiver = None
+        self.break_postponed_receiver = None
         self.last_micro = None
         self.last_rest = None
         self.last_daily = None
 
         self.bus.watch_name_owner(BUS_NAME, self._on_name_owner_changed)
+        try:
+            GLib.io_add_watch(sys.stdin.fileno(), GLib.IO_IN, self._on_stdin_readable)
+        except Exception:
+            pass
+
+    def _on_stdin_readable(self, source, condition):
+        try:
+            line = sys.stdin.readline()
+            if not line:
+                return False
+            cmd = line.strip()
+            if cmd in ("activity", "ping"):
+                if self.core_iface:
+                    mode = str(self.core_iface.GetOperationMode())
+                    if mode == "normal":
+                        micro_state = str(self.core_iface.GetBreakState("microbreak"))
+                        rest_state = str(self.core_iface.GetBreakState("restbreak"))
+                        if micro_state in ("", "none") and rest_state in ("", "none"):
+                            self.core_iface.ReportActivity("dbus", True)
+        except Exception:
+            pass
+        return True
 
     def _on_name_owner_changed(self, new_owner):
         if new_owner:
@@ -102,6 +201,24 @@ class WorkraveMonitor:
                     signal_name="OperationModeChanged",
                     dbus_interface=CORE_IFACE
                 )
+            if not self.usage_receiver:
+                self.usage_receiver = self.bus.add_signal_receiver(
+                    self._on_usage_changed,
+                    signal_name="UsageModeChanged",
+                    dbus_interface=CORE_IFACE
+                )
+            if not self.break_skipped_receiver:
+                self.break_skipped_receiver = self.bus.add_signal_receiver(
+                    self._on_break_event,
+                    signal_name="BreakSkipped",
+                    dbus_interface=CORE_IFACE
+                )
+            if not self.break_postponed_receiver:
+                self.break_postponed_receiver = self.bus.add_signal_receiver(
+                    self._on_break_event,
+                    signal_name="BreakPostponed",
+                    dbus_interface=CORE_IFACE
+                )
 
             self.is_connected = True
             self._emit_current_state()
@@ -126,10 +243,13 @@ class WorkraveMonitor:
         print(json.dumps(payload), flush=True)
 
     def _on_mode_changed(self, mode):
-        if self.last_micro and self.last_rest and self.last_daily:
-            self._on_timers_updated(self.last_micro, self.last_rest, self.last_daily)
-        else:
-            self._emit_current_state()
+        self._emit_current_state()
+
+    def _on_usage_changed(self, mode):
+        self._emit_current_state()
+
+    def _on_break_event(self, timer_id):
+        self._emit_current_state()
 
     def _on_timers_updated(self, micro, rest, daily):
         self.last_micro = micro
@@ -137,12 +257,19 @@ class WorkraveMonitor:
         self.last_daily = daily
         self._emit_snapshot(micro, rest, daily)
 
+    def _get_usage_mode(self) -> str:
+        try:
+            return str(self.core_iface.GetUsageMode())
+        except Exception:
+            return "normal"
+
     def _emit_current_state(self):
         if not self.is_connected or not self.core_iface:
             self._emit_not_running()
             return
         try:
             mode = str(self.core_iface.GetOperationMode())
+            usage_mode = self._get_usage_mode()
             micro_running = bool(self.core_iface.IsTimerRunning("microbreak"))
             idle_sec = int(self.core_iface.GetTimerIdle("microbreak"))
             micro_rem = int(self.core_iface.GetTimerRemaining("microbreak"))
@@ -157,6 +284,7 @@ class WorkraveMonitor:
             payload = {
                 "running": True,
                 "mode": mode,
+                "usage_mode": usage_mode,
                 "user_active": micro_running,
                 "idle_seconds": idle_sec,
                 "micro": {
@@ -191,6 +319,7 @@ class WorkraveMonitor:
             return
         try:
             mode = str(self.core_iface.GetOperationMode())
+            usage_mode = self._get_usage_mode()
             micro_running = bool(self.core_iface.IsTimerRunning("microbreak"))
             idle_sec = int(self.core_iface.GetTimerIdle("microbreak"))
             micro_state = str(self.core_iface.GetBreakState("microbreak"))
@@ -203,6 +332,7 @@ class WorkraveMonitor:
             payload = {
                 "running": True,
                 "mode": mode,
+                "usage_mode": usage_mode,
                 "user_active": micro_running,
                 "idle_seconds": idle_sec,
                 "micro": {
@@ -256,7 +386,7 @@ def main():
         if sys.argv[1] == "action" and len(sys.argv) > 2:
             execute_action(sys.argv[2])
             return
-        elif sys.argv[1] == "--help" or sys.argv[1] == "-h":
+        elif sys.argv[1] in ("--help", "-h"):
             print("Usage: workrave-monitor.py [action <action_name>]")
             return
 

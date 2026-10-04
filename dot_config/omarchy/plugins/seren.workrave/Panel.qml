@@ -18,12 +18,16 @@ Panel {
     readonly property bool userActive: hostWidget ? hostWidget.userActive : false
     readonly property int idleSeconds: hostWidget ? hostWidget.idleSeconds : 0
     readonly property string operationMode: hostWidget ? hostWidget.operationMode : "normal"
+    readonly property string usageMode: hostWidget ? hostWidget.usageMode : "normal"
+    readonly property bool breakActive: hostWidget ? hostWidget.breakActive : false
     readonly property string microText: hostWidget ? hostWidget.microText : ""
     readonly property int microRemaining: hostWidget ? hostWidget.microRemaining : 0
     readonly property int microLimit: hostWidget ? hostWidget.microLimit : 180
+    readonly property string microState: hostWidget ? hostWidget.microState : "none"
     readonly property string restText: hostWidget ? hostWidget.restText : ""
     readonly property int restRemaining: hostWidget ? hostWidget.restRemaining : 0
     readonly property int restLimit: hostWidget ? hostWidget.restLimit : 2700
+    readonly property string restState: hostWidget ? hostWidget.restState : "none"
     readonly property string dailyText: hostWidget ? hostWidget.dailyText : ""
     readonly property int dailyRemaining: hostWidget ? hostWidget.dailyRemaining : 0
     readonly property int dailyLimit: hostWidget ? hostWidget.dailyLimit : 14400
@@ -65,7 +69,7 @@ Panel {
         bar: root.bar
         open: root.opened
         focusTarget: keyCatcher
-        contentWidth: panel.fittedContentWidth(Style.space(340))
+        contentWidth: panel.fittedContentWidth(Style.space(360))
         contentHeight: panel.fittedContentHeight(mainColumn.implicitHeight)
 
         PanelKeyCatcher {
@@ -106,8 +110,28 @@ Panel {
 
                         Text {
                             textFormat: Text.PlainText
-                            text: !root.workraveRunning ? "NOT RUNNING" : (!root.userActive ? ("HALTED · IDLE " + root.formatIdle(root.idleSeconds).toUpperCase()) : (root.operationMode === "suspended" ? "SUSPENDED" : (root.operationMode === "quiet" ? "QUIET MODE" : "ACTIVE · RUNNING")))
-                            color: !root.workraveRunning ? Qt.darker(root.barForeground, 1.5) : (!root.userActive ? Color.urgent : Color.accent)
+                            text: {
+                                if (!root.workraveRunning)
+                                    return "NOT RUNNING";
+                                if (root.breakActive)
+                                    return (root.microState !== "none" ? "REST ACTIVE · DO NOT TYPE" : "REST BREAK · STEP AWAY");
+                                if (root.operationMode === "suspended")
+                                    return "SUSPENDED · TIMERS FROZEN";
+                                if (root.operationMode === "quiet")
+                                    return "QUIET MODE · POPUPS MUTED";
+                                if (root.usageMode === "reading")
+                                    return "READING MODE · VOICE / CONTINUOUS";
+                                if (!root.userActive)
+                                    return "AWAY · IDLE " + root.formatIdle(root.idleSeconds).toUpperCase();
+                                return "ACTIVE · RUNNING";
+                            }
+                            color: {
+                                if (!root.workraveRunning)
+                                    return Qt.darker(root.barForeground, 1.5);
+                                if (root.breakActive || !root.userActive)
+                                    return Color.urgent;
+                                return Color.accent;
+                            }
                             font.family: root.bar ? root.bar.fontFamily : Style.font.family
                             font.pixelSize: Style.font.caption
                             font.bold: true
@@ -118,8 +142,28 @@ Panel {
                     Text {
                         id: heroGlyph
                         textFormat: Text.PlainText
-                        text: !root.workraveRunning ? "󰅶" : (!root.userActive ? "󱫡" : (root.operationMode === "suspended" ? "󰏤" : "󰔟"))
-                        color: !root.workraveRunning ? Qt.darker(root.barForeground, 1.5) : (!root.userActive ? Color.urgent : Color.accent)
+                        text: {
+                            if (!root.workraveRunning)
+                                return "󰅶";
+                            if (root.breakActive)
+                                return "";
+                            if (root.usageMode === "reading")
+                                return "󰈙";
+                            if (!root.userActive)
+                                return "󱫡";
+                            if (root.operationMode === "suspended")
+                                return "󰏤";
+                            if (root.operationMode === "quiet")
+                                return "󰂛";
+                            return "󰔟";
+                        }
+                        color: {
+                            if (!root.workraveRunning)
+                                return Qt.darker(root.barForeground, 1.5);
+                            if (root.breakActive || !root.userActive)
+                                return Color.urgent;
+                            return Color.accent;
+                        }
                         font.family: root.bar ? root.bar.fontFamily : Style.font.family
                         font.pixelSize: Style.font.display
                         anchors.right: parent.right
@@ -127,10 +171,80 @@ Panel {
                     }
                 }
 
+                // Active Break Banner
+                BorderSurface {
+                    visible: root.breakActive
+                    width: parent.width
+                    implicitHeight: breakCol.implicitHeight + Style.space(16)
+                    radius: Style.cornerRadius
+                    color: Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.15)
+                    border.color: Color.urgent
+                    border.width: 1
+
+                    Column {
+                        id: breakCol
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: Style.space(8)
+                        spacing: Style.space(8)
+
+                        Row {
+                            spacing: Style.space(8)
+                            Text {
+                                text: ""
+                                font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                                font.pixelSize: Style.font.title
+                                color: Color.urgent
+                            }
+                            Column {
+                                spacing: Style.space(2)
+                                Text {
+                                    text: root.microState !== "none" ? "Microbreak in progress" : "Rest break in progress"
+                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                                    font.pixelSize: Style.font.body
+                                    font.bold: true
+                                    color: root.barForeground
+                                }
+                                Text {
+                                    text: (root.microState !== "none" ? root.microText : root.restText) + " remaining"
+                                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                                    font.pixelSize: Style.font.caption
+                                    color: Color.urgent
+                                }
+                            }
+                        }
+
+                        Row {
+                            spacing: Style.space(6)
+                            width: parent.width
+
+                            Button {
+                                width: (parent.width - Style.space(6)) / 2
+                                text: "Skip"
+                                iconText: "󰒮"
+                                bordered: true
+                                tooltipText: "Skip this break and resume work."
+                                onClicked: root.triggerAction("skip_current")
+                            }
+
+                            Button {
+                                width: (parent.width - Style.space(6)) / 2
+                                text: "Postpone"
+                                iconText: "󰔛"
+                                bordered: true
+                                tooltipText: "Postpone this break by a few minutes."
+                                onClicked: root.triggerAction("postpone_current")
+                            }
+                        }
+                    }
+                }
+
                 PanelSeparator {
                     width: parent.width
                 }
 
+                // Microbreak
                 Item {
                     width: parent.width
                     implicitHeight: timerCol1.implicitHeight
@@ -148,7 +262,7 @@ Panel {
                                 id: microLabel
                                 textFormat: Text.PlainText
                                 anchors.left: parent.left
-                                text: "󰈊  Microbreak"
+                                text: "  Microbreak"
                                 color: root.barForeground
                                 font.family: root.bar ? root.bar.fontFamily : Style.font.family
                                 font.pixelSize: Style.font.body
@@ -195,6 +309,7 @@ Panel {
                     }
                 }
 
+                // Rest Break
                 Item {
                     width: parent.width
                     implicitHeight: timerCol2.implicitHeight
@@ -259,6 +374,7 @@ Panel {
                     }
                 }
 
+                // Daily Limit
                 Item {
                     width: parent.width
                     implicitHeight: timerCol3.implicitHeight
@@ -327,58 +443,149 @@ Panel {
                     width: parent.width
                 }
 
-                Row {
+                // Operating Modes
+                PanelSectionHeader {
+                    text: "OPERATING MODE"
+                }
+
+                Column {
+                    width: parent.width
                     spacing: Style.space(6)
 
-                    Button {
-                        text: "Normal"
-                        iconText: "󰄬"
-                        selected: root.operationMode === "normal"
-                        onClicked: root.triggerAction("mode_normal")
+                    Row {
+                        width: parent.width
+                        spacing: Style.space(6)
+
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Normal"
+                            iconText: "󰄬"
+                            selected: root.operationMode === "normal" && root.usageMode !== "reading"
+                            tooltipText: "Timers track mouse/typing. Scheduled break modals prompt you to rest."
+                            onClicked: {
+                                root.triggerAction("mode_normal");
+                                if (root.usageMode === "reading") {
+                                    root.triggerAction("usage_normal");
+                                }
+                            }
+                        }
+
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Reading"
+                            iconText: "󰈙"
+                            selected: root.usageMode === "reading"
+                            tooltipText: "Continuous work timer without mouse or keyboard inputs (voice dictation / reading)."
+                            onClicked: root.triggerAction("toggle_reading")
+                        }
                     }
 
-                    Button {
-                        text: "Quiet"
-                        iconText: "󰂛"
-                        selected: root.operationMode === "quiet"
-                        onClicked: root.triggerAction("mode_quiet")
+                    Row {
+                        width: parent.width
+                        spacing: Style.space(6)
+
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Quiet"
+                            iconText: "󰂛"
+                            selected: root.operationMode === "quiet"
+                            tooltipText: "Mute modals. Timers track in the background, but modals stay suppressed for calls."
+                            onClicked: root.triggerAction("mode_quiet")
+                        }
+
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Suspend"
+                            iconText: "󰏤"
+                            selected: root.operationMode === "suspended"
+                            tooltipText: "Freeze all timers while watching videos, eating, or relaxing."
+                            onClicked: root.triggerAction("mode_suspended")
+                        }
                     }
 
-                    Button {
-                        text: "Suspend"
-                        iconText: "󰏤"
-                        selected: root.operationMode === "suspended"
-                        onClicked: root.triggerAction("mode_suspended")
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        textFormat: Text.PlainText
+                        font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                        font.pixelSize: Style.font.caption
+                        color: Qt.darker(root.barForeground, 1.4)
+                        text: {
+                            if (root.operationMode === "suspended")
+                                return "Suspended: All timers are frozen. Use when relaxing or watching movies.";
+                            if (root.operationMode === "quiet")
+                                return "Quiet: Timers run silently in background. Popups are suppressed.";
+                            if (root.usageMode === "reading")
+                                return "Reading: Timers tick without typing. Ideal for Wispr Flow voice dictation.";
+                            return "Normal: Timers track active input and prompt breaks on schedule.";
+                        }
                     }
                 }
 
-                Row {
+                PanelSeparator {
+                    width: parent.width
+                }
+
+                // Quick Actions
+                PanelSectionHeader {
+                    text: "ACTIONS & TOOLS"
+                }
+
+                Column {
+                    width: parent.width
                     spacing: Style.space(6)
 
-                    Button {
-                        text: "Rest Break"
-                        iconText: "󰅶"
-                        onClicked: {
-                            root.triggerAction("restbreak");
-                            root.close();
+                    Row {
+                        width: parent.width
+                        spacing: Style.space(6)
+
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Rest Break"
+                            iconText: "󰅶"
+                            tooltipText: "Start an immediate rest break right now."
+                            onClicked: {
+                                root.triggerAction("restbreak");
+                                root.close();
+                            }
+                        }
+
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Exercises"
+                            iconText: "󰋪"
+                            tooltipText: "Open guided exercise routines (neck, eyes, shoulders)."
+                            onClicked: {
+                                root.triggerAction("exercises");
+                                root.close();
+                            }
                         }
                     }
 
-                    Button {
-                        text: "Settings"
-                        iconText: "󰒓"
-                        onClicked: {
-                            root.triggerAction("preferences");
-                            root.close();
-                        }
-                    }
+                    Row {
+                        width: parent.width
+                        spacing: Style.space(6)
 
-                    Button {
-                        text: "Window"
-                        iconText: "󰍹"
-                        onClicked: {
-                            root.triggerAction("open");
-                            root.close();
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Statistics"
+                            iconText: "󰄫"
+                            tooltipText: "View break statistics and computer usage history."
+                            onClicked: {
+                                root.triggerAction("statistics");
+                                root.close();
+                            }
+                        }
+
+                        Button {
+                            width: (parent.width - Style.space(6)) / 2
+                            text: "Settings"
+                            iconText: "󰒓"
+                            tooltipText: "Open Workrave Preferences window."
+                            onClicked: {
+                                root.triggerAction("preferences");
+                                root.close();
+                            }
                         }
                     }
                 }

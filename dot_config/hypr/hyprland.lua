@@ -43,6 +43,28 @@ o.window({ class = "^wispr-flow$", title = "^(Status|Flow Status Indicator)$" },
   move = { 20, 350 },
 })
 
+-- Workrave break modals: intrusive overlay pinned across all workspaces
+o.window({ class = "^[oO]rg\\.workrave\\.Workrave$", title = "^(Rest break|Micro-break|Micro-pause|Daily limit|Exercises).*$" }, {
+  float = true,
+  pin = true,
+  center = true,
+  focus_on_activate = true,
+  border_size = 3,
+})
+
+-- Workrave utility dialogs: float and center without pinning
+o.window({ class = "^[oO]rg\\.workrave\\.Workrave$", title = "^(Preferences|Statistics).*$" }, {
+  float = true,
+  pin = false,
+  center = true,
+})
+
+-- Suppress focus stealing and workspace jumping from Chromium during CDP/DevTools automation
+o.window({ class = "^(chromium|google-chrome)$" }, {
+  suppress_event = "activate activatefocus",
+  no_initial_focus = true,
+})
+
 -- Fix video playback in Hybrid mode by explicitly overriding the Omarchy NVIDIA defaults
 local handle = io.popen("supergfxctl -g 2>/dev/null")
 if handle then
