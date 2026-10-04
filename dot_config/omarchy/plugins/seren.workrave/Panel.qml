@@ -137,8 +137,10 @@ Panel {
                             color: {
                                 if (!root.workraveRunning)
                                     return Qt.darker(root.barForeground, 1.5);
-                                if (root.breakActive || (!root.userActive && root.idleSeconds >= 5))
+                                if (root.breakActive)
                                     return Color.urgent;
+                                if (!root.userActive && root.idleSeconds >= 5)
+                                    return Qt.darker(root.barForeground, 1.2);
                                 return Color.accent;
                             }
                             font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -169,8 +171,10 @@ Panel {
                         color: {
                             if (!root.workraveRunning)
                                 return Qt.darker(root.barForeground, 1.5);
-                            if (root.breakActive || !root.userActive)
+                            if (root.breakActive)
                                 return Color.urgent;
+                            if (!root.userActive && root.idleSeconds >= 5)
+                                return Qt.darker(root.barForeground, 1.2);
                             return Color.accent;
                         }
                         font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -434,7 +438,7 @@ Panel {
                                 anchors.verticalCenter: dailyTrack.verticalCenter
                                 height: dailyTrack.height
                                 radius: dailyTrack.radius
-                                color: !root.userActive ? Color.urgent : Color.accent
+                                color: root.dailyRemaining <= 0 ? Color.urgent : Color.accent
                                 width: Math.max(dailyTrack.height, dailyTrack.width * root.dailyFraction)
 
                                 Behavior on width {

@@ -57,8 +57,6 @@ BarWidget {
             return "󰅶";
         if (usageMode === "reading")
             return "󰈙";
-        if (!userActive && idleSeconds >= 5)
-            return "󱫡";
         if (microRemaining > 0 && (microRemaining <= restRemaining || restRemaining <= 0)) {
             return "󰔟";
         }

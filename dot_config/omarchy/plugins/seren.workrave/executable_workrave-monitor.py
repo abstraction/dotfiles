@@ -243,12 +243,10 @@ class WorkraveMonitor:
             else:
                 self.reading_mode_start_time = None
 
-            # If a break is active or timed mode is active, emit periodic update so countdown ticks smoothly
-            m_state = str(self.core_iface.GetBreakState("microbreak"))
-            r_state = str(self.core_iface.GetBreakState("restbreak"))
+            # If timed mode is active, emit periodic update so auto-reset countdown ticks smoothly
             reset_rem = self._get_reset_remaining()
-            if (m_state not in ("", "none") or r_state not in ("", "none") or reset_rem > 0) and self.last_micro and self.last_rest and self.last_daily:
-                self._emit_snapshot(self.last_micro, self.last_rest, self.last_daily)
+            if reset_rem > 0 and mode in ("suspended", "quiet"):
+                self._emit_state()
         except Exception:
             pass
 
@@ -333,7 +331,7 @@ class WorkraveMonitor:
                 )
 
             self.is_connected = True
-            self._emit_current_state()
+            self._emit_state()
         except Exception as e:
             self.is_connected = False
             self._emit_not_running(str(e))
@@ -352,26 +350,29 @@ class WorkraveMonitor:
             "running": False,
             "error": err
         }
-        print(json.dumps(payload), flush=True)
+        try:
+            print(json.dumps(payload), flush=True)
+        except BrokenPipeError:
+            sys.exit(0)
 
     def _on_mode_changed(self, mode):
         self.active_work_seconds_while_suspended = 0
-        self._emit_current_state()
+        self._emit_state()
 
     def _on_usage_changed(self, mode):
-        self._emit_current_state()
+        self._emit_state()
 
     def _on_break_event(self, timer_id):
-        self._emit_current_state()
+        self._emit_state()
 
     def _on_break_changed(self, progress):
-        self._emit_current_state()
+        self._emit_state()
 
     def _on_timers_updated(self, micro, rest, daily):
         self.last_micro = micro
         self.last_rest = rest
         self.last_daily = daily
-        self._emit_snapshot(micro, rest, daily)
+        self._emit_state()
 
     def _get_usage_mode(self) -> str:
         try:
@@ -379,7 +380,7 @@ class WorkraveMonitor:
         except Exception:
             return "normal"
 
-    def _emit_current_state(self):
+    def _emit_state(self):
         if not self.is_connected or not self.core_iface:
             self._emit_not_running()
             return
@@ -393,93 +394,13 @@ class WorkraveMonitor:
 
             reset_rem, reset_dur = self._get_reset_info()
 
-            if micro_state in ("break", "prelude") and self.last_micro:
-                duration = int(self.last_micro[4]) if int(self.last_micro[4]) > 0 else 30
-                idle = idle_sec
-                rem = max(0, duration - idle)
-                micro_payload = {
-                    "text": self._format_seconds(rem),
-                    "remaining": rem,
-                    "limit": duration,
-                    "elapsed": idle,
-                    "state": micro_state
-                }
-            else:
-                micro_rem = int(self.core_iface.GetTimerRemaining("microbreak"))
-                micro_elapsed = int(self.core_iface.GetTimerElapsed("microbreak"))
-                micro_payload = {
-                    "text": self._format_seconds(micro_rem),
-                    "remaining": max(0, micro_rem),
-                    "limit": max(0, micro_rem + micro_elapsed),
-                    "elapsed": micro_elapsed,
-                    "state": micro_state
-                }
-
-            if rest_state in ("break", "prelude") and self.last_rest:
-                duration = int(self.last_rest[4]) if int(self.last_rest[4]) > 0 else 600
-                idle = idle_sec
-                rem = max(0, duration - idle)
-                rest_payload = {
-                    "text": self._format_seconds(rem),
-                    "remaining": rem,
-                    "limit": duration,
-                    "elapsed": idle,
-                    "state": rest_state
-                }
-            else:
-                rest_rem = int(self.core_iface.GetTimerRemaining("restbreak"))
-                rest_elapsed = int(self.core_iface.GetTimerElapsed("restbreak"))
-                rest_payload = {
-                    "text": self._format_seconds(rest_rem),
-                    "remaining": max(0, rest_rem),
-                    "limit": max(0, rest_rem + rest_elapsed),
-                    "elapsed": rest_elapsed,
-                    "state": rest_state
-                }
-
-            daily_rem = int(self.core_iface.GetTimerRemaining("dailylimit"))
-            daily_elapsed = int(self.core_iface.GetTimerElapsed("dailylimit"))
-
-            payload = {
-                "running": True,
-                "mode": mode,
-                "usage_mode": usage_mode,
-                "user_active": is_active,
-                "idle_seconds": idle_sec,
-                "reset_remaining": reset_rem,
-                "reset_duration": reset_dur,
-                "active_work_suspended": self.active_work_seconds_while_suspended,
-                "micro": micro_payload,
-                "rest": rest_payload,
-                "daily": {
-                    "text": self._format_seconds(daily_rem),
-                    "remaining": max(0, daily_rem),
-                    "limit": max(0, daily_rem + daily_elapsed),
-                    "elapsed": daily_elapsed,
-                    "state": "none"
-                }
-            }
-            print(json.dumps(payload), flush=True)
-        except Exception as e:
-            self._emit_not_running(str(e))
-
-    def _emit_snapshot(self, micro, rest, daily):
-        if not self.is_connected or not self.core_iface:
-            self._emit_not_running()
-            return
-        try:
-            mode = str(self.core_iface.GetOperationMode())
-            usage_mode = self._get_usage_mode()
-            is_active = bool(self.core_iface.IsActive()) if hasattr(self.core_iface, "IsActive") else bool(self.core_iface.IsTimerRunning("microbreak"))
-            idle_sec = int(self.core_iface.GetTimerIdle("microbreak"))
-            micro_state = str(self.core_iface.GetBreakState("microbreak"))
-            rest_state = str(self.core_iface.GetBreakState("restbreak"))
-
-            reset_rem, reset_dur = self._get_reset_info()
+            micro = self.last_micro
+            rest = self.last_rest
+            daily = self.last_daily
 
             if micro_state in ("break", "prelude"):
-                duration = int(micro[4]) if int(micro[4]) > 0 else 30
-                idle = int(micro[3])
+                duration = int(micro[4]) if micro and int(micro[4]) > 0 else 30
+                idle = int(micro[3]) if micro else idle_sec
                 rem = max(0, duration - idle)
                 micro_payload = {
                     "text": self._format_seconds(rem),
@@ -488,7 +409,7 @@ class WorkraveMonitor:
                     "elapsed": idle,
                     "state": micro_state
                 }
-            else:
+            elif micro:
                 micro_rem = int(micro[7]) - int(micro[6]) if int(micro[7]) > 0 else 0
                 micro_payload = {
                     "text": str(micro[0]) if str(micro[0]) else self._format_seconds(micro_rem),
@@ -497,10 +418,20 @@ class WorkraveMonitor:
                     "elapsed": int(micro[6]),
                     "state": micro_state
                 }
+            else:
+                micro_rem = int(self.core_iface.GetTimerRemaining("microbreak"))
+                micro_elapsed = int(self.core_iface.GetTimerElapsed("microbreak"))
+                micro_payload = {
+                    "text": self._format_seconds(micro_rem),
+                    "remaining": max(0, micro_rem),
+                    "limit": 180,
+                    "elapsed": micro_elapsed,
+                    "state": micro_state
+                }
 
             if rest_state in ("break", "prelude"):
-                duration = int(rest[4]) if int(rest[4]) > 0 else 600
-                idle = int(rest[3])
+                duration = int(rest[4]) if rest and int(rest[4]) > 0 else 600
+                idle = int(rest[3]) if rest else int(self.core_iface.GetTimerIdle("restbreak"))
                 rem = max(0, duration - idle)
                 rest_payload = {
                     "text": self._format_seconds(rem),
@@ -509,7 +440,7 @@ class WorkraveMonitor:
                     "elapsed": idle,
                     "state": rest_state
                 }
-            else:
+            elif rest:
                 rest_rem = int(rest[7]) - int(rest[6]) if int(rest[7]) > 0 else 0
                 rest_payload = {
                     "text": str(rest[0]) if str(rest[0]) else self._format_seconds(rest_rem),
@@ -518,8 +449,36 @@ class WorkraveMonitor:
                     "elapsed": int(rest[6]),
                     "state": rest_state
                 }
+            else:
+                rest_rem = int(self.core_iface.GetTimerRemaining("restbreak"))
+                rest_elapsed = int(self.core_iface.GetTimerElapsed("restbreak"))
+                rest_payload = {
+                    "text": self._format_seconds(rest_rem),
+                    "remaining": max(0, rest_rem),
+                    "limit": 1800,
+                    "elapsed": rest_elapsed,
+                    "state": rest_state
+                }
 
-            daily_rem = int(daily[7]) - int(daily[6]) if int(daily[7]) > 0 else 0
+            if daily:
+                daily_rem = int(daily[7]) - int(daily[6]) if int(daily[7]) > 0 else 0
+                daily_payload = {
+                    "text": str(daily[0]) if str(daily[0]) else self._format_seconds(daily_rem),
+                    "remaining": max(0, daily_rem),
+                    "limit": int(daily[7]),
+                    "elapsed": int(daily[6]),
+                    "state": "none"
+                }
+            else:
+                daily_rem = int(self.core_iface.GetTimerRemaining("dailylimit"))
+                daily_elapsed = int(self.core_iface.GetTimerElapsed("dailylimit"))
+                daily_payload = {
+                    "text": self._format_seconds(daily_rem),
+                    "remaining": max(0, daily_rem),
+                    "limit": 14400,
+                    "elapsed": daily_elapsed,
+                    "state": "none"
+                }
 
             payload = {
                 "running": True,
@@ -532,15 +491,12 @@ class WorkraveMonitor:
                 "active_work_suspended": self.active_work_seconds_while_suspended,
                 "micro": micro_payload,
                 "rest": rest_payload,
-                "daily": {
-                    "text": str(daily[0]) if str(daily[0]) else self._format_seconds(daily_rem),
-                    "remaining": max(0, daily_rem),
-                    "limit": int(daily[7]),
-                    "elapsed": int(daily[6]),
-                    "state": "none"
-                }
+                "daily": daily_payload
             }
-            print(json.dumps(payload), flush=True)
+            try:
+                print(json.dumps(payload), flush=True)
+            except BrokenPipeError:
+                sys.exit(0)
         except Exception as e:
             self._emit_not_running(str(e))
 
