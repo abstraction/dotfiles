@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "seren.workrave",
+  "name": "Workrave",
+  "version": "1.0.0",
+  "author": "Seren",
+  "description": "Workrave RSI break timer status and control",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Workrave",
+    "description": "Workrave RSI break timer status and control",
+    "category": "Status",
+    "allowMultiple": false
+  }
+}
