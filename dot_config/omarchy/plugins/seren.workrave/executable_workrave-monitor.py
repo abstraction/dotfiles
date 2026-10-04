@@ -31,11 +31,15 @@ def execute_action(action: str):
             core.SetOperationMode(mode)
             if mode in ("suspended", "quiet"):
                 try:
-                    core.SkipBreak("microbreak")
+                    m_state = str(core.GetBreakState("microbreak"))
+                    if m_state not in ("", "none"):
+                        core.SkipBreak("microbreak")
                 except Exception:
                     pass
                 try:
-                    core.SkipBreak("restbreak")
+                    r_state = str(core.GetBreakState("restbreak"))
+                    if r_state not in ("", "none"):
+                        core.SkipBreak("restbreak")
                 except Exception:
                     pass
             print(f"Set mode to {mode}")
@@ -71,11 +75,6 @@ def execute_action(action: str):
                 new_time = max(int(time.time()), current_time) + 900
                 settings.set_int64("operation-mode-auto-reset-time", new_time)
                 print(f"Extended auto-reset time to {new_time}")
-        elif action == "activity":
-            core_obj = bus.get_object(BUS_NAME, CORE_PATH)
-            core = dbus.Interface(core_obj, CORE_IFACE)
-            core.ReportActivity("mouse", True)
-            print("Reported activity")
         elif action in ("open", "preferences", "restbreak", "exercises", "statistics", "about", "quit"):
             ui_obj = bus.get_object(BUS_NAME, UI_PATH)
             ui = dbus.Interface(ui_obj, UI_IFACE)
@@ -101,15 +100,7 @@ def execute_action(action: str):
                     core.SkipBreak("restbreak")
                     print("Skipped restbreak")
                 else:
-                    try:
-                        core.SkipBreak("microbreak")
-                    except Exception:
-                        pass
-                    try:
-                        core.SkipBreak("restbreak")
-                    except Exception:
-                        pass
-                    print("Skipped active breaks")
+                    print("No active break to skip")
         elif action in ("postpone_current", "postpone_microbreak", "postpone_restbreak"):
             core_obj = bus.get_object(BUS_NAME, CORE_PATH)
             core = dbus.Interface(core_obj, CORE_IFACE)
@@ -129,15 +120,7 @@ def execute_action(action: str):
                     core.PostponeBreak("restbreak")
                     print("Postponed restbreak")
                 else:
-                    try:
-                        core.PostponeBreak("microbreak")
-                    except Exception:
-                        pass
-                    try:
-                        core.PostponeBreak("restbreak")
-                    except Exception:
-                        pass
-                    print("Postponed active breaks")
+                    print("No active break to postpone")
         else:
             print(f"Unknown action: {action}", file=sys.stderr)
             sys.exit(1)
@@ -159,15 +142,25 @@ class WorkraveMonitor:
         self.usage_receiver = None
         self.break_skipped_receiver = None
         self.break_postponed_receiver = None
+        self.micro_changed_receiver = None
+        self.rest_changed_receiver = None
+        self.daily_changed_receiver = None
         self.last_micro = None
         self.last_rest = None
         self.last_daily = None
 
-        # GSettings for auto-reset timing
+        # GSettings for auto-reset timing and ensuring native Wayland
         try:
             self.settings = Gio.Settings.new("org.workrave.general")
         except Exception:
             self.settings = None
+
+        try:
+            gui_settings = Gio.Settings.new("org.workrave.gui")
+            if gui_settings.get_boolean("force-x11"):
+                gui_settings.set_boolean("force-x11", False)
+        except Exception:
+            pass
 
         # Watchdog state
         self.active_work_seconds_while_suspended = 0
@@ -176,71 +169,9 @@ class WorkraveMonitor:
         self.last_reading_reminder_time = 0
 
         self.bus.watch_name_owner(BUS_NAME, self._on_name_owner_changed)
-        try:
-            GLib.io_add_watch(sys.stdin.fileno(), GLib.IO_IN, self._on_stdin_readable)
-        except Exception:
-            pass
 
         # Periodic timer for watchdog and countdown updates (1 second)
         GLib.timeout_add_seconds(1, self._on_second_tick)
-
-    def _on_stdin_readable(self, source, condition):
-        try:
-            line = sys.stdin.readline()
-            if not line:
-                return False
-            cmd = line.strip()
-            if cmd in ("activity", "ping"):
-                if self.core_iface:
-                    mode = str(self.core_iface.GetOperationMode())
-                    if mode == "normal":
-                        micro_state = str(self.core_iface.GetBreakState("microbreak"))
-                        rest_state = str(self.core_iface.GetBreakState("restbreak"))
-                        try:
-                            micro_rem = int(self.core_iface.GetTimerRemaining("microbreak"))
-                        except Exception:
-                            micro_rem = 100
-                        try:
-                            rest_rem = int(self.core_iface.GetTimerRemaining("restbreak"))
-                        except Exception:
-                            rest_rem = 100
-                        if (micro_state in ("", "none") and
-                            rest_state in ("", "none") and
-                            micro_rem > 2 and
-                            rest_rem > 2):
-                            self.core_iface.ReportActivity("dbus", True)
-                        # Reset suspended work accumulator
-                        self.active_work_seconds_while_suspended = 0
-                    elif mode in ("suspended", "quiet"):
-                        # User is actively working while in suspended or quiet mode
-                        self.active_work_seconds_while_suspended += 2
-                        now = time.time()
-
-                        # 20 minutes of continuous typing while suspended -> gentle reminder
-                        if self.active_work_seconds_while_suspended >= 1200 and now - self.last_work_reminder_time > 300:
-                            self.last_work_reminder_time = now
-                            mins = self.active_work_seconds_while_suspended // 60
-                            self._send_notification(
-                                "Workrave is Suspended",
-                                f"Active typing detected for {mins} minutes. Breaks remain paused.",
-                                urgency="normal"
-                            )
-
-                        # 30 minutes of continuous typing while suspended -> auto resume normal mode
-                        if self.active_work_seconds_while_suspended >= 1800:
-                            self.active_work_seconds_while_suspended = 0
-                            try:
-                                self.core_iface.SetOperationMode("normal")
-                                self._send_notification(
-                                    "Workrave Auto-Resumed",
-                                    "Continuous work detected for 30 minutes while suspended. Normal break monitoring restored.",
-                                    urgency="critical"
-                                )
-                            except Exception:
-                                pass
-        except Exception:
-            pass
-        return True
 
     def _send_notification(self, title: str, body: str, urgency: str = "normal"):
         try:
@@ -255,35 +186,71 @@ class WorkraveMonitor:
             pass
 
     def _on_second_tick(self):
-        # Decay active work accumulator slowly if user stopped typing
-        if self.active_work_seconds_while_suspended > 0:
-            self.active_work_seconds_while_suspended = max(0, self.active_work_seconds_while_suspended - 1)
+        if not self.is_connected or not self.core_iface:
+            return True
 
-        # Check Reading Mode duration
-        if self.is_connected and self.core_iface:
-            try:
-                usage = str(self.core_iface.GetUsageMode())
-                now = time.time()
-                if usage == "reading":
-                    if self.reading_mode_start_time is None:
-                        self.reading_mode_start_time = now
-                    elif now - self.reading_mode_start_time >= 2700 and now - self.last_reading_reminder_time > 900:
-                        # 45 minutes of reading mode
-                        self.last_reading_reminder_time = now
+        try:
+            mode = str(self.core_iface.GetOperationMode())
+            is_active = bool(self.core_iface.IsActive()) if hasattr(self.core_iface, "IsActive") else bool(self.core_iface.IsTimerRunning("microbreak"))
+
+            if mode in ("suspended", "quiet"):
+                if is_active:
+                    self.active_work_seconds_while_suspended += 1
+                    now = time.time()
+
+                    # 20 minutes of continuous typing while suspended -> gentle reminder
+                    if self.active_work_seconds_while_suspended >= 1200 and now - self.last_work_reminder_time > 300:
+                        self.last_work_reminder_time = now
+                        mins = self.active_work_seconds_while_suspended // 60
                         self._send_notification(
-                            "Reading Mode Reminder",
-                            "Reading mode active for 45 minutes without keyboard input. Break timers will prompt soon.",
+                            "Workrave is Suspended",
+                            f"Active computer use detected for {mins} minutes. Breaks remain paused.",
                             urgency="normal"
                         )
-                else:
-                    self.reading_mode_start_time = None
-            except Exception:
-                pass
 
-        # If a timed mode is active, emit periodic update so countdown increments smoothly
-        reset_rem = self._get_reset_remaining()
-        if reset_rem > 0 and self.last_micro and self.last_rest and self.last_daily:
-            self._emit_snapshot(self.last_micro, self.last_rest, self.last_daily)
+                    # 30 minutes of continuous typing while suspended -> auto resume normal mode
+                    if self.active_work_seconds_while_suspended >= 1800:
+                        self.active_work_seconds_while_suspended = 0
+                        try:
+                            self.core_iface.SetOperationMode("normal")
+                            self._send_notification(
+                                "Workrave Auto-Resumed",
+                                "Continuous work detected for 30 minutes while suspended. Normal break monitoring restored.",
+                                urgency="critical"
+                            )
+                        except Exception:
+                            pass
+                else:
+                    if self.active_work_seconds_while_suspended > 0:
+                        self.active_work_seconds_while_suspended = max(0, self.active_work_seconds_while_suspended - 1)
+            else:
+                self.active_work_seconds_while_suspended = 0
+
+            # Check Reading Mode duration
+            usage = str(self.core_iface.GetUsageMode())
+            now = time.time()
+            if usage == "reading":
+                if self.reading_mode_start_time is None:
+                    self.reading_mode_start_time = now
+                elif now - self.reading_mode_start_time >= 2700 and now - self.last_reading_reminder_time > 900:
+                    # 45 minutes of reading mode
+                    self.last_reading_reminder_time = now
+                    self._send_notification(
+                        "Reading Mode Reminder",
+                        "Reading mode active for 45 minutes without keyboard input. Break timers will prompt soon.",
+                        urgency="normal"
+                    )
+            else:
+                self.reading_mode_start_time = None
+
+            # If a break is active or timed mode is active, emit periodic update so countdown ticks smoothly
+            m_state = str(self.core_iface.GetBreakState("microbreak"))
+            r_state = str(self.core_iface.GetBreakState("restbreak"))
+            reset_rem = self._get_reset_remaining()
+            if (m_state not in ("", "none") or r_state not in ("", "none") or reset_rem > 0) and self.last_micro and self.last_rest and self.last_daily:
+                self._emit_snapshot(self.last_micro, self.last_rest, self.last_daily)
+        except Exception:
+            pass
 
         return True
 
@@ -346,6 +313,24 @@ class WorkraveMonitor:
                     signal_name="BreakPostponed",
                     dbus_interface=CORE_IFACE
                 )
+            if not self.micro_changed_receiver:
+                self.micro_changed_receiver = self.bus.add_signal_receiver(
+                    self._on_break_changed,
+                    signal_name="MicrobreakChanged",
+                    dbus_interface=CORE_IFACE
+                )
+            if not self.rest_changed_receiver:
+                self.rest_changed_receiver = self.bus.add_signal_receiver(
+                    self._on_break_changed,
+                    signal_name="RestbreakChanged",
+                    dbus_interface=CORE_IFACE
+                )
+            if not self.daily_changed_receiver:
+                self.daily_changed_receiver = self.bus.add_signal_receiver(
+                    self._on_break_changed,
+                    signal_name="DailylimitChanged",
+                    dbus_interface=CORE_IFACE
+                )
 
             self.is_connected = True
             self._emit_current_state()
@@ -379,6 +364,9 @@ class WorkraveMonitor:
     def _on_break_event(self, timer_id):
         self._emit_current_state()
 
+    def _on_break_changed(self, progress):
+        self._emit_current_state()
+
     def _on_timers_updated(self, micro, rest, daily):
         self.last_micro = micro
         self.last_rest = rest
@@ -398,42 +386,71 @@ class WorkraveMonitor:
         try:
             mode = str(self.core_iface.GetOperationMode())
             usage_mode = self._get_usage_mode()
-            micro_running = bool(self.core_iface.IsTimerRunning("microbreak"))
+            is_active = bool(self.core_iface.IsActive()) if hasattr(self.core_iface, "IsActive") else bool(self.core_iface.IsTimerRunning("microbreak"))
             idle_sec = int(self.core_iface.GetTimerIdle("microbreak"))
-            micro_rem = int(self.core_iface.GetTimerRemaining("microbreak"))
-            micro_elapsed = int(self.core_iface.GetTimerElapsed("microbreak"))
-            rest_rem = int(self.core_iface.GetTimerRemaining("restbreak"))
-            rest_elapsed = int(self.core_iface.GetTimerElapsed("restbreak"))
-            daily_rem = int(self.core_iface.GetTimerRemaining("dailylimit"))
-            daily_elapsed = int(self.core_iface.GetTimerElapsed("dailylimit"))
             micro_state = str(self.core_iface.GetBreakState("microbreak"))
             rest_state = str(self.core_iface.GetBreakState("restbreak"))
 
             reset_rem, reset_dur = self._get_reset_info()
 
-            payload = {
-                "running": True,
-                "mode": mode,
-                "usage_mode": usage_mode,
-                "user_active": micro_running,
-                "idle_seconds": idle_sec,
-                "reset_remaining": reset_rem,
-                "reset_duration": reset_dur,
-                "active_work_suspended": self.active_work_seconds_while_suspended,
-                "micro": {
+            if micro_state in ("break", "prelude") and self.last_micro:
+                duration = int(self.last_micro[4]) if int(self.last_micro[4]) > 0 else 30
+                idle = idle_sec
+                rem = max(0, duration - idle)
+                micro_payload = {
+                    "text": self._format_seconds(rem),
+                    "remaining": rem,
+                    "limit": duration,
+                    "elapsed": idle,
+                    "state": micro_state
+                }
+            else:
+                micro_rem = int(self.core_iface.GetTimerRemaining("microbreak"))
+                micro_elapsed = int(self.core_iface.GetTimerElapsed("microbreak"))
+                micro_payload = {
                     "text": self._format_seconds(micro_rem),
                     "remaining": max(0, micro_rem),
                     "limit": max(0, micro_rem + micro_elapsed),
                     "elapsed": micro_elapsed,
                     "state": micro_state
-                },
-                "rest": {
+                }
+
+            if rest_state in ("break", "prelude") and self.last_rest:
+                duration = int(self.last_rest[4]) if int(self.last_rest[4]) > 0 else 600
+                idle = idle_sec
+                rem = max(0, duration - idle)
+                rest_payload = {
+                    "text": self._format_seconds(rem),
+                    "remaining": rem,
+                    "limit": duration,
+                    "elapsed": idle,
+                    "state": rest_state
+                }
+            else:
+                rest_rem = int(self.core_iface.GetTimerRemaining("restbreak"))
+                rest_elapsed = int(self.core_iface.GetTimerElapsed("restbreak"))
+                rest_payload = {
                     "text": self._format_seconds(rest_rem),
                     "remaining": max(0, rest_rem),
                     "limit": max(0, rest_rem + rest_elapsed),
                     "elapsed": rest_elapsed,
                     "state": rest_state
-                },
+                }
+
+            daily_rem = int(self.core_iface.GetTimerRemaining("dailylimit"))
+            daily_elapsed = int(self.core_iface.GetTimerElapsed("dailylimit"))
+
+            payload = {
+                "running": True,
+                "mode": mode,
+                "usage_mode": usage_mode,
+                "user_active": is_active,
+                "idle_seconds": idle_sec,
+                "reset_remaining": reset_rem,
+                "reset_duration": reset_dur,
+                "active_work_suspended": self.active_work_seconds_while_suspended,
+                "micro": micro_payload,
+                "rest": rest_payload,
                 "daily": {
                     "text": self._format_seconds(daily_rem),
                     "remaining": max(0, daily_rem),
@@ -453,42 +470,70 @@ class WorkraveMonitor:
         try:
             mode = str(self.core_iface.GetOperationMode())
             usage_mode = self._get_usage_mode()
-            micro_running = bool(self.core_iface.IsTimerRunning("microbreak"))
+            is_active = bool(self.core_iface.IsActive()) if hasattr(self.core_iface, "IsActive") else bool(self.core_iface.IsTimerRunning("microbreak"))
             idle_sec = int(self.core_iface.GetTimerIdle("microbreak"))
             micro_state = str(self.core_iface.GetBreakState("microbreak"))
             rest_state = str(self.core_iface.GetBreakState("restbreak"))
 
-            micro_rem = int(micro[7]) - int(micro[6]) if int(micro[7]) > 0 else 0
-            rest_rem = int(rest[7]) - int(rest[6]) if int(rest[7]) > 0 else 0
-            daily_rem = int(daily[7]) - int(daily[6]) if int(daily[7]) > 0 else 0
-
             reset_rem, reset_dur = self._get_reset_info()
+
+            if micro_state in ("break", "prelude"):
+                duration = int(micro[4]) if int(micro[4]) > 0 else 30
+                idle = int(micro[3])
+                rem = max(0, duration - idle)
+                micro_payload = {
+                    "text": self._format_seconds(rem),
+                    "remaining": rem,
+                    "limit": duration,
+                    "elapsed": idle,
+                    "state": micro_state
+                }
+            else:
+                micro_rem = int(micro[7]) - int(micro[6]) if int(micro[7]) > 0 else 0
+                micro_payload = {
+                    "text": str(micro[0]) if str(micro[0]) else self._format_seconds(micro_rem),
+                    "remaining": max(0, micro_rem),
+                    "limit": int(micro[7]),
+                    "elapsed": int(micro[6]),
+                    "state": micro_state
+                }
+
+            if rest_state in ("break", "prelude"):
+                duration = int(rest[4]) if int(rest[4]) > 0 else 600
+                idle = int(rest[3])
+                rem = max(0, duration - idle)
+                rest_payload = {
+                    "text": self._format_seconds(rem),
+                    "remaining": rem,
+                    "limit": duration,
+                    "elapsed": idle,
+                    "state": rest_state
+                }
+            else:
+                rest_rem = int(rest[7]) - int(rest[6]) if int(rest[7]) > 0 else 0
+                rest_payload = {
+                    "text": str(rest[0]) if str(rest[0]) else self._format_seconds(rest_rem),
+                    "remaining": max(0, rest_rem),
+                    "limit": int(rest[7]),
+                    "elapsed": int(rest[6]),
+                    "state": rest_state
+                }
+
+            daily_rem = int(daily[7]) - int(daily[6]) if int(daily[7]) > 0 else 0
 
             payload = {
                 "running": True,
                 "mode": mode,
                 "usage_mode": usage_mode,
-                "user_active": micro_running,
+                "user_active": is_active,
                 "idle_seconds": idle_sec,
                 "reset_remaining": reset_rem,
                 "reset_duration": reset_dur,
                 "active_work_suspended": self.active_work_seconds_while_suspended,
-                "micro": {
-                    "text": str(micro[0]),
-                    "remaining": max(0, micro_rem),
-                    "limit": int(micro[7]),
-                    "elapsed": int(micro[6]),
-                    "state": micro_state
-                },
-                "rest": {
-                    "text": str(rest[0]),
-                    "remaining": max(0, rest_rem),
-                    "limit": int(rest[7]),
-                    "elapsed": int(rest[6]),
-                    "state": rest_state
-                },
+                "micro": micro_payload,
+                "rest": rest_payload,
                 "daily": {
-                    "text": str(daily[0]),
+                    "text": str(daily[0]) if str(daily[0]) else self._format_seconds(daily_rem),
                     "remaining": max(0, daily_rem),
                     "limit": int(daily[7]),
                     "elapsed": int(daily[6]),

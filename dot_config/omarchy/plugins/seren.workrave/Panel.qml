@@ -15,7 +15,7 @@ Panel {
     readonly property var barIdentity: hostWidget || root
 
     readonly property bool workraveRunning: hostWidget ? hostWidget.workraveRunning : false
-    readonly property bool userActive: hostWidget ? hostWidget.userActive : false
+    readonly property bool userActive: hostWidget ? hostWidget.userActive : true
     readonly property int idleSeconds: hostWidget ? hostWidget.idleSeconds : 0
     readonly property string operationMode: hostWidget ? hostWidget.operationMode : "normal"
     readonly property string usageMode: hostWidget ? hostWidget.usageMode : "normal"
@@ -130,14 +130,14 @@ Panel {
                                 }
                                 if (root.usageMode === "reading")
                                     return "READING MODE · VOICE / CONTINUOUS";
-                                if (!root.userActive)
+                                if (!root.userActive && root.idleSeconds >= 5)
                                     return "AWAY · IDLE " + root.formatIdle(root.idleSeconds).toUpperCase();
                                 return "ACTIVE · RUNNING";
                             }
                             color: {
                                 if (!root.workraveRunning)
                                     return Qt.darker(root.barForeground, 1.5);
-                                if (root.breakActive || !root.userActive)
+                                if (root.breakActive || (!root.userActive && root.idleSeconds >= 5))
                                     return Color.urgent;
                                 return Color.accent;
                             }
@@ -304,7 +304,7 @@ Panel {
                                 anchors.verticalCenter: microTrack.verticalCenter
                                 height: microTrack.height
                                 radius: microTrack.radius
-                                color: !root.userActive ? Color.urgent : Color.accent
+                                color: root.microState !== "none" ? Color.urgent : Color.accent
                                 width: Math.max(microTrack.height, microTrack.width * root.microFraction)
 
                                 Behavior on width {
@@ -369,7 +369,7 @@ Panel {
                                 anchors.verticalCenter: restTrack.verticalCenter
                                 height: restTrack.height
                                 radius: restTrack.radius
-                                color: !root.userActive ? Color.urgent : Color.accent
+                                color: root.restState !== "none" ? Color.urgent : Color.accent
                                 width: Math.max(restTrack.height, restTrack.width * root.restFraction)
 
                                 Behavior on width {

@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 
@@ -10,7 +9,7 @@ BarWidget {
     moduleName: "seren.workrave"
 
     property bool workraveRunning: false
-    readonly property bool userActive: !waylandIdle.isIdle
+    property bool userActive: true
     property int idleSeconds: 0
     property string operationMode: "normal"
     property string usageMode: "normal"
@@ -32,7 +31,7 @@ BarWidget {
     // Display format: 0 = dual (micro + rest), 1 = next imminent break, 2 = icon only
     property int formatIndex: setting("format", 0)
 
-    readonly property bool breakActive: microState !== "none" || restState !== "none" || (microRemaining <= 1 && microRemaining > 0) || (restRemaining <= 1 && restRemaining > 0)
+    readonly property bool breakActive: microState !== "none" || restState !== "none"
     readonly property bool dimmed: !userActive || !workraveRunning
 
     function formatIdle(sec) {
@@ -58,7 +57,7 @@ BarWidget {
             return "󰅶";
         if (usageMode === "reading")
             return "󰈙";
-        if (!userActive)
+        if (!userActive && idleSeconds >= 5)
             return "󱫡";
         if (microRemaining > 0 && (microRemaining <= restRemaining || restRemaining <= 0)) {
             return "󰔟";
@@ -85,12 +84,12 @@ BarWidget {
             return "󰂛 Quiet";
         }
         if (breakActive) {
-            if (microState !== "none" || microRemaining <= 1)
+            if (microState !== "none")
                 return " Micro (" + (microText || "0s") + ")";
-            if (restState !== "none" || restRemaining <= 1)
+            if (restState !== "none")
                 return "󰅶 Rest (" + (restText || "0s") + ")";
         }
-        var modePrefix = usageMode === "reading" ? "󰈙 " : (!userActive ? "󱫡 " : "");
+        var modePrefix = usageMode === "reading" ? "󰈙 " : (!userActive && idleSeconds >= 5 ? "󱫡 " : "");
         if (formatIndex === 2) {
             return modePrefix !== "" ? modePrefix.trim() : "󰅶";
         }
@@ -108,7 +107,7 @@ BarWidget {
         if (!workraveRunning) {
             return "Workrave · Not running\nClick to launch Workrave";
         }
-        var status = usageMode === "reading" ? "Reading Mode (Continuous)" : (userActive ? "Active" : ("Away (idle > " + waylandIdle.timeout + "s)"));
+        var status = usageMode === "reading" ? "Reading Mode (Continuous)" : (userActive || idleSeconds < 5 ? "Active" : ("Away (idle " + formatIdle(idleSeconds) + ")"));
         var mode = operationMode.charAt(0).toUpperCase() + operationMode.slice(1);
         if (resetRemaining > 0) {
             mode += " (Auto-resumes in " + Math.ceil(resetRemaining / 60) + "m)";
@@ -136,6 +135,7 @@ BarWidget {
             }
             operationMode = data.mode || "normal";
             usageMode = data.usage_mode || "normal";
+            userActive = data.user_active === true;
             idleSeconds = data.idle_seconds || 0;
             resetRemaining = data.reset_remaining || 0;
             resetDuration = data.reset_duration || 0;
@@ -169,24 +169,6 @@ BarWidget {
         actionProc.running = true;
     }
 
-    IdleMonitor {
-        id: waylandIdle
-        enabled: true
-        timeout: 45
-    }
-
-    Timer {
-        id: activityPingTimer
-        interval: 2000
-        repeat: true
-        running: root.workraveRunning && !waylandIdle.isIdle && !root.breakActive
-        onTriggered: {
-            if (monitorProc.running) {
-                monitorProc.write("activity\n");
-            }
-        }
-    }
-
     Process {
         id: actionProc
         command: []
@@ -196,7 +178,6 @@ BarWidget {
         id: monitorProc
         command: [Quickshell.env("HOME") + "/.config/omarchy/plugins/seren.workrave/workrave-monitor.py"]
         running: true
-        stdinEnabled: true
         stdout: SplitParser {
             onRead: function (line) {
                 root.handleUpdate(line);
