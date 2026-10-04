@@ -23,7 +23,7 @@ BarWidget {
     property string microState: "none"
     property string restText: ""
     property int restRemaining: 0
-    property int restLimit: 2700
+    property int restLimit: 1800
     property string restState: "none"
     property string dailyText: ""
     property int dailyRemaining: 0
@@ -32,7 +32,7 @@ BarWidget {
     // Display format: 0 = dual (micro + rest), 1 = next imminent break, 2 = icon only
     property int formatIndex: setting("format", 0)
 
-    readonly property bool breakActive: microState !== "none" || restState !== "none"
+    readonly property bool breakActive: microState !== "none" || restState !== "none" || (microRemaining <= 1 && microRemaining > 0) || (restRemaining <= 1 && restRemaining > 0)
     readonly property bool dimmed: !userActive || !workraveRunning
 
     function formatIdle(sec) {
@@ -85,10 +85,10 @@ BarWidget {
             return "󰂛 Quiet";
         }
         if (breakActive) {
-            if (microState !== "none")
-                return " Rest (" + microText + ")";
-            if (restState !== "none")
-                return "󰅶 Break (" + restText + ")";
+            if (microState !== "none" || microRemaining <= 1)
+                return " Micro (" + (microText || "0s") + ")";
+            if (restState !== "none" || restRemaining <= 1)
+                return "󰅶 Rest (" + (restText || "0s") + ")";
         }
         var modePrefix = usageMode === "reading" ? "󰈙 " : (!userActive ? "󱫡 " : "");
         if (formatIndex === 2) {
@@ -150,7 +150,7 @@ BarWidget {
             if (data.rest) {
                 restText = data.rest.text || "";
                 restRemaining = data.rest.remaining || 0;
-                restLimit = data.rest.limit || 2700;
+                restLimit = data.rest.limit || 1800;
                 restState = data.rest.state || "none";
             }
             if (data.daily) {

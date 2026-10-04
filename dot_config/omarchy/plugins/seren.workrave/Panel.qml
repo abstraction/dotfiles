@@ -29,7 +29,7 @@ Panel {
     readonly property string microState: hostWidget ? hostWidget.microState : "none"
     readonly property string restText: hostWidget ? hostWidget.restText : ""
     readonly property int restRemaining: hostWidget ? hostWidget.restRemaining : 0
-    readonly property int restLimit: hostWidget ? hostWidget.restLimit : 2700
+    readonly property int restLimit: hostWidget ? hostWidget.restLimit : 1800
     readonly property string restState: hostWidget ? hostWidget.restState : "none"
     readonly property string dailyText: hostWidget ? hostWidget.dailyText : ""
     readonly property int dailyRemaining: hostWidget ? hostWidget.dailyRemaining : 0

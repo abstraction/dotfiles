@@ -196,7 +196,18 @@ class WorkraveMonitor:
                     if mode == "normal":
                         micro_state = str(self.core_iface.GetBreakState("microbreak"))
                         rest_state = str(self.core_iface.GetBreakState("restbreak"))
-                        if micro_state in ("", "none") and rest_state in ("", "none"):
+                        try:
+                            micro_rem = int(self.core_iface.GetTimerRemaining("microbreak"))
+                        except Exception:
+                            micro_rem = 100
+                        try:
+                            rest_rem = int(self.core_iface.GetTimerRemaining("restbreak"))
+                        except Exception:
+                            rest_rem = 100
+                        if (micro_state in ("", "none") and
+                            rest_state in ("", "none") and
+                            micro_rem > 2 and
+                            rest_rem > 2):
                             self.core_iface.ReportActivity("dbus", True)
                         # Reset suspended work accumulator
                         self.active_work_seconds_while_suspended = 0
