@@ -14,6 +14,9 @@ BarWidget {
     property int idleSeconds: 0
     property string operationMode: "normal"
     property string usageMode: "normal"
+    property int resetRemaining: 0
+    property int resetDuration: 0
+    property int activeWorkSuspended: 0
     property string microText: ""
     property int microRemaining: 0
     property int microLimit: 180
@@ -68,9 +71,17 @@ BarWidget {
             return "󰅶 Off";
         }
         if (operationMode === "suspended") {
+            if (resetRemaining > 0) {
+                var mSusp = Math.ceil(resetRemaining / 60);
+                return "󰏤 Susp (" + mSusp + "m)";
+            }
             return "󰏤 Suspended";
         }
         if (operationMode === "quiet") {
+            if (resetRemaining > 0) {
+                var mQuiet = Math.ceil(resetRemaining / 60);
+                return "󰂛 Quiet (" + mQuiet + "m)";
+            }
             return "󰂛 Quiet";
         }
         if (breakActive) {
@@ -99,7 +110,17 @@ BarWidget {
         }
         var status = usageMode === "reading" ? "Reading Mode (Continuous)" : (userActive ? "Active" : ("Away (idle > " + waylandIdle.timeout + "s)"));
         var mode = operationMode.charAt(0).toUpperCase() + operationMode.slice(1);
-        var lines = ["Workrave · " + status, "• Micro-break: " + (microText || "—"), "• Rest break:  " + (restText || "—"), "• Daily limit: " + (dailyText || "—"), "• Mode:        " + mode, "• Usage:       " + (usageMode === "reading" ? "Reading / Voice" : "Normal input"), "", "Left-click: Details panel", "Right-click: Cycle display (Dual / Next / Icon)", "Middle-click: Start rest break"];
+        if (resetRemaining > 0) {
+            mode += " (Auto-resumes in " + Math.ceil(resetRemaining / 60) + "m)";
+        }
+        var lines = ["Workrave · " + status, "• Micro-break: " + (microText || "—"), "• Rest break:  " + (restText || "—"), "• Daily limit: " + (dailyText || "—"), "• Mode:        " + mode, "• Usage:       " + (usageMode === "reading" ? "Reading / Voice" : "Normal input")];
+        if (activeWorkSuspended > 0) {
+            lines.push("• Active work while suspended: " + Math.floor(activeWorkSuspended / 60) + "m / 30m");
+        }
+        lines.push("");
+        lines.push("Left-click: Details panel");
+        lines.push("Right-click: Cycle display (Dual / Next / Icon)");
+        lines.push("Middle-click: Start rest break");
         return lines.join("\n");
     }
 
@@ -116,6 +137,9 @@ BarWidget {
             operationMode = data.mode || "normal";
             usageMode = data.usage_mode || "normal";
             idleSeconds = data.idle_seconds || 0;
+            resetRemaining = data.reset_remaining || 0;
+            resetDuration = data.reset_duration || 0;
+            activeWorkSuspended = data.active_work_suspended || 0;
 
             if (data.micro) {
                 microText = data.micro.text || "";
@@ -155,7 +179,7 @@ BarWidget {
         id: activityPingTimer
         interval: 2000
         repeat: true
-        running: root.workraveRunning && !waylandIdle.isIdle && !root.breakActive && root.operationMode === "normal"
+        running: root.workraveRunning && !waylandIdle.isIdle && !root.breakActive
         onTriggered: {
             if (monitorProc.running) {
                 monitorProc.write("activity\n");

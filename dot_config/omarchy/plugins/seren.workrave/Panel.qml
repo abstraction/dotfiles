@@ -20,6 +20,9 @@ Panel {
     readonly property string operationMode: hostWidget ? hostWidget.operationMode : "normal"
     readonly property string usageMode: hostWidget ? hostWidget.usageMode : "normal"
     readonly property bool breakActive: hostWidget ? hostWidget.breakActive : false
+    readonly property int resetRemaining: hostWidget ? hostWidget.resetRemaining : 0
+    readonly property int resetDuration: hostWidget ? hostWidget.resetDuration : 0
+    readonly property int activeWorkSuspended: hostWidget ? hostWidget.activeWorkSuspended : 0
     readonly property string microText: hostWidget ? hostWidget.microText : ""
     readonly property int microRemaining: hostWidget ? hostWidget.microRemaining : 0
     readonly property int microLimit: hostWidget ? hostWidget.microLimit : 180
@@ -115,10 +118,16 @@ Panel {
                                     return "NOT RUNNING";
                                 if (root.breakActive)
                                     return (root.microState !== "none" ? "REST ACTIVE · DO NOT TYPE" : "REST BREAK · STEP AWAY");
-                                if (root.operationMode === "suspended")
+                                if (root.operationMode === "suspended") {
+                                    if (root.resetRemaining > 0)
+                                        return "SUSPENDED · " + Math.ceil(root.resetRemaining / 60) + "M REMAINING";
                                     return "SUSPENDED · TIMERS FROZEN";
-                                if (root.operationMode === "quiet")
+                                }
+                                if (root.operationMode === "quiet") {
+                                    if (root.resetRemaining > 0)
+                                        return "QUIET MODE · " + Math.ceil(root.resetRemaining / 60) + "M REMAINING";
                                     return "QUIET MODE · POPUPS MUTED";
+                                }
                                 if (root.usageMode === "reading")
                                     return "READING MODE · VOICE / CONTINUOUS";
                                 if (!root.userActive)
@@ -503,6 +512,108 @@ Panel {
                         }
                     }
 
+                    // Timed duration chips (visible when in Suspended or Quiet mode)
+                    Row {
+                        width: parent.width
+                        spacing: Style.space(6)
+                        visible: root.operationMode === "suspended" || root.operationMode === "quiet"
+
+                        Button {
+                            width: (parent.width - Style.space(18)) / 4
+                            text: "30m"
+                            selected: root.resetDuration === 30
+                            fontSize: Style.font.caption
+                            tooltipText: "Set timed " + root.operationMode + " for 30 minutes. Auto-resumes afterward."
+                            onClicked: root.triggerAction("timed_" + root.operationMode + "_30")
+                        }
+
+                        Button {
+                            width: (parent.width - Style.space(18)) / 4
+                            text: "1h"
+                            selected: root.resetDuration === 60
+                            fontSize: Style.font.caption
+                            tooltipText: "Set timed " + root.operationMode + " for 1 hour. Auto-resumes afterward."
+                            onClicked: root.triggerAction("timed_" + root.operationMode + "_60")
+                        }
+
+                        Button {
+                            width: (parent.width - Style.space(18)) / 4
+                            text: "2h"
+                            selected: root.resetDuration === 120
+                            fontSize: Style.font.caption
+                            tooltipText: "Set timed " + root.operationMode + " for 2 hours. Auto-resumes afterward."
+                            onClicked: root.triggerAction("timed_" + root.operationMode + "_120")
+                        }
+
+                        Button {
+                            width: (parent.width - Style.space(18)) / 4
+                            text: "All Day"
+                            selected: root.resetDuration === 0
+                            fontSize: Style.font.caption
+                            tooltipText: "Set " + root.operationMode + " indefinitely. Protected by work watchdog."
+                            onClicked: root.triggerAction("mode_" + root.operationMode)
+                        }
+                    }
+
+                    // Auto-reset banner when timed mode is active
+                    BorderSurface {
+                        visible: root.resetRemaining > 0 && (root.operationMode === "suspended" || root.operationMode === "quiet")
+                        width: parent.width
+                        implicitHeight: timerResetRow.implicitHeight + Style.space(10)
+                        radius: Style.cornerRadius
+                        color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.12)
+                        border.color: Color.accent
+                        border.width: 1
+
+                        Row {
+                            id: timerResetRow
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.margins: Style.space(6)
+                            spacing: Style.space(4)
+
+                            Text {
+                                width: parent.width - Style.space(136)
+                                textFormat: Text.PlainText
+                                font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                                font.pixelSize: Style.font.caption
+                                font.bold: true
+                                color: root.barForeground
+                                text: "Resumes in " + root.formatDuration(root.resetRemaining)
+                            }
+
+                            Button {
+                                width: Style.space(60)
+                                text: "+15m"
+                                fontSize: Style.font.caption
+                                tooltipText: "Extend timed mode by 15 minutes."
+                                onClicked: root.triggerAction("extend_timed")
+                            }
+
+                            Button {
+                                width: Style.space(68)
+                                text: "Resume"
+                                fontSize: Style.font.caption
+                                tooltipText: "Return to Normal mode immediately."
+                                onClicked: root.triggerAction("mode_normal")
+                            }
+                        }
+                    }
+
+                    // Watchdog alert if typing detected while suspended
+                    Text {
+                        visible: root.activeWorkSuspended > 60 && (root.operationMode === "suspended" || root.operationMode === "quiet")
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        textFormat: Text.PlainText
+                        font.family: root.bar ? root.bar.fontFamily : Style.font.family
+                        font.pixelSize: Style.font.caption
+                        font.bold: true
+                        color: Color.urgent
+                        text: "󱫡 Active typing detected: " + Math.floor(root.activeWorkSuspended / 60) + "m / 30m before auto-resume."
+                    }
+
                     Text {
                         width: parent.width
                         wrapMode: Text.WordWrap
@@ -512,11 +623,11 @@ Panel {
                         color: Qt.darker(root.barForeground, 1.4)
                         text: {
                             if (root.operationMode === "suspended")
-                                return "Suspended: All timers are frozen. Use when relaxing or watching movies.";
+                                return "Suspended: Timers frozen. Active work watchdog auto-resumes after 30m of typing.";
                             if (root.operationMode === "quiet")
-                                return "Quiet: Timers run silently in background. Popups are suppressed.";
+                                return "Quiet: Background tracking with muted popups. Auto-resumes if timed.";
                             if (root.usageMode === "reading")
-                                return "Reading: Timers tick without typing. Ideal for Wispr Flow voice dictation.";
+                                return "Reading: Continuous timer for Wispr Flow dictation. Auto-resets on idle.";
                             return "Normal: Timers track active input and prompt breaks on schedule.";
                         }
                     }
