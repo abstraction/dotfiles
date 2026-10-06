@@ -19,11 +19,11 @@ DIVIDER="${C_MUTED}│${C_RESET}"
 
 for arg in "$@"; do
   if [ "$arg" = "--version" ] || [ "$arg" = "-v" ]; then
-    echo "Antigravity CLI Statusline v0.4.0"
+    echo "Antigravity CLI Statusline v0.5.0"
     exit 0
   fi
   if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
-    echo -e "${C_INFO}${C_BOLD}󰓅 Minimal Omarchy Statusline Legend (v0.4.0)${C_RESET}"
+    echo -e "${C_INFO}${C_BOLD}󰓅 Minimal Omarchy Statusline Legend (v0.5.0)${C_RESET}"
     echo -e "A high-density, responsive telemetry statusline that dynamically adapts to split panes."
     echo -e ""
     echo -e "${C_BOLD}LAYOUT & RESPONSIVENESS:${C_RESET}"
@@ -35,14 +35,20 @@ for arg in "$@"; do
     echo -e "  ${C_SUCCESS}${C_BOLD} READY${C_RESET} / ${C_INFO}${C_BOLD} WORKING${C_RESET}   Agent state (READY, WORKING, THINKING, TOOL)."
     echo -e "  ${C_PRIMARY}${C_BOLD} main${C_WARN}*${C_RESET}                   Git branch with dirty indicator (*)."
     echo -e "  ${C_PRIMARY} 3.8 Flash ${C_MUTED}[H]${C_RESET}           Active model with compact effort badge ([H], [M], [L], [T])."
+    echo -e "  ${C_PRIMARY} vapour${C_RESET}                  Active multi-account switcher profile (acs)."
     echo -e "  ${C_PRIMARY} ~/my/think/temp${C_RESET}        Current working directory."
     echo -e "  ${C_MUTED}󱍏${C_RESET} 18.6% ${C_MUTED}(195K)${C_RESET}          Active conversation context window usage and total token count."
+    echo -e "  ${C_INFO}󱐋 94%${C_RESET} ${C_MUTED}(89K)${C_RESET}             Prompt cache hit ratio and cached tokens (progressive disclosure)."
     echo -e "  ${C_INFO} 2${C_RESET}  ${C_THINK}󱙺 1${C_RESET}  ${C_WARN} 1${C_RESET}         Progressive disclosure: artifacts, subagents, and tasks"
     echo -e "                        appear only when active (> 0). Zero-counts are omitted."
     echo -e "  ${C_BOLD}G:${C_RESET} 95%${C_MUTED}/${C_RESET}${C_WARN}18%${C_RESET} ${C_MUTED} 4h/1d${C_RESET} ${DIVIDER} ${C_MUTED}C:${C_RESET} 54%${C_MUTED}/${C_RESET}57% ${C_MUTED} 4h/4d${C_RESET}"
     echo -e "                        Dual quota telemetry: Gemini (G:) and Claude/3P (C:) models,"
     echo -e "                        displaying short (5h) / weekly (7d) remaining percentages"
     echo -e "                        and parallel reset deadlines (). Active model is bolded."
+    echo -e ""
+    echo -e "${C_BOLD}PERFORMANCE ARCHITECTURE:${C_RESET}"
+    echo -e "  - Subshell-free ANSI length calculator using native Bash parameter expansion."
+    echo -e "  - Fork-free live countdown timestamps via printf builtin %(%s)T."
     exit 0
   fi
 done
@@ -157,7 +163,8 @@ if ! [[ "$TP_WK_RESET" =~ ^[0-9]+$ ]]; then TP_WK_RESET="-1"; fi
 _tick_countdown() {
   local val="$1"
   local cache_file="$2"
-  local now; now=$(date +%s)
+  local now
+  printf -v now '%(%s)T' -1
 
   if [ -z "$val" ] || [ "$val" -le 0 ] 2>/dev/null; then
     rm -f "$cache_file" 2>/dev/null || true
@@ -354,9 +361,13 @@ shorten_path() {
 }
 
 visible_len() {
-  local clean
-  clean=$(echo -e "$1" | sed -r "s/\x1b\[[0-9;]*[a-zA-Z]//g")
-  echo "${#clean}"
+  local s="$1"
+  local esc=$'\x1b'
+  local re="(${esc}|\\\\033)\[[0-9;]*[a-zA-Z]"
+  while [[ "$s" =~ $re ]]; do
+    s="${s/"${BASH_REMATCH[0]}"/}"
+  done
+  echo "${#s}"
 }
 
 # ─── Icons ───────────────────────────────────────────────────────────────────
@@ -367,6 +378,7 @@ ICON_TOOL=""
 ICON_STATE_UNKNOWN=""
 ICON_VCS=""
 ICON_MODEL=""
+ICON_PROFILE=""
 ICON_SANDBOX_NET="󰒙"
 ICON_SANDBOX_NONET="󰴴"
 ICON_CONTEXT_BAR="󱍏"
@@ -379,9 +391,9 @@ ICON_BOLT="󱐋"
 
 # ─── Git Resolution ──────────────────────────────────────────────────────────
 if [ -z "$VCS_BRANCH" ] && [ -n "$CWD" ]; then
-  VCS_BRANCH=$(git -C "$CWD" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  VCS_BRANCH=$(run_with_timeout 0.1 git -C "$CWD" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   if [ -n "$VCS_BRANCH" ]; then
-    if git -C "$CWD" status --porcelain -uno 2>/dev/null | grep -q .; then
+    if run_with_timeout 0.15 git -C "$CWD" status --porcelain -uno 2>/dev/null | grep -q .; then
       VCS_DIRTY="true"
     fi
   fi
@@ -426,6 +438,16 @@ else
   MODEL_SEG="${C_PRIMARY}${ICON_MODEL} ${MODEL_DISP}${C_RESET}"
 fi
 
+# ─── Multi-Account Profile Resolution (ACS) ──────────────────────────────────
+ACS_ACTIVE=""
+ACS_STATE="${HOME}/.antigravity-cli-switcher/state.json"
+if [ -f "$ACS_STATE" ]; then
+  ACS_ACTIVE=$(awk '
+    /^    "[^"]+": \{/ { match($0, /^    "([^"]+)"/, m); curr = m[1] }
+    /"status": "active"/ { if (curr != "") { print curr; exit } }
+  ' "$ACS_STATE" 2>/dev/null || true)
+fi
+
 # ─── Assemble LINE1 (Identity & State) ───────────────────────────────────────
 ACTIVE_SEGS=()
 case "$STATE" in
@@ -446,6 +468,10 @@ fi
 
 if [ -n "$MODEL_DISP" ]; then
   ACTIVE_SEGS+=("$MODEL_SEG")
+fi
+
+if [ -n "$ACS_ACTIVE" ]; then
+  ACTIVE_SEGS+=("${C_PRIMARY}${ICON_PROFILE} ${ACS_ACTIVE}${C_RESET}")
 fi
 
 CWD_SHORT=$(shorten_path "$CWD")
@@ -511,22 +537,35 @@ if [ -n "$PCT_FMT" ]; then
   BADGE_LIST+=("${C_MUTED}${ICON_CONTEXT_BAR}${C_RESET} ${ctx_color}${PCT_FMT}%${C_RESET}${ctx_detail}")
 fi
 
-# 2. Artifacts Counter (Progressive disclosure: ONLY if > 0)
+# 2. Prompt Cache Telemetry (Progressive disclosure: ONLY if cache reads > 0)
+if [ "$TURN_CACHE_TOKENS" -gt 0 ] 2>/dev/null && [ "$TURN_INPUT_TOKENS" -gt 0 ] 2>/dev/null; then
+  cache_pct=$(( TURN_CACHE_TOKENS * 100 / TURN_INPUT_TOKENS ))
+  if [ "$cache_pct" -gt 0 ]; then
+    cache_fmt=$(human_format "$TURN_CACHE_TOKENS")
+    if [ "$COLS" -ge 110 ] 2>/dev/null; then
+      BADGE_LIST+=("${C_INFO}${ICON_BOLT}${C_RESET} ${cache_pct}% ${C_MUTED}(${cache_fmt})${C_RESET}")
+    else
+      BADGE_LIST+=("${C_INFO}${ICON_BOLT}${C_RESET} ${cache_pct}%")
+    fi
+  fi
+fi
+
+# 3. Artifacts Counter (Progressive disclosure: ONLY if > 0)
 if [ "$ARTIFACTS" -gt 0 ] 2>/dev/null; then
   BADGE_LIST+=("$(make_badge "${ICON_ARTIFACTS}" "${ARTIFACTS}" "${C_INFO}")")
 fi
 
-# 3. Subagents Counter (Progressive disclosure: ONLY if > 0)
+# 4. Subagents Counter (Progressive disclosure: ONLY if > 0)
 if [ "$SUBAGENTS" -gt 0 ] 2>/dev/null; then
   BADGE_LIST+=("$(make_badge "${ICON_SUBAGENTS}" "${SUBAGENTS}" "${C_THINK}")")
 fi
 
-# 4. Background Tasks Counter (Progressive disclosure: ONLY if > 0)
+# 5. Background Tasks Counter (Progressive disclosure: ONLY if > 0)
 if [ "$BG_TASKS" -gt 0 ] 2>/dev/null; then
   BADGE_LIST+=("$(make_badge "${ICON_TASKS}" "${BG_TASKS}" "${C_WARN}")")
 fi
 
-# 5. Sandbox Status (Progressive disclosure: ONLY if enabled/restricted)
+# 6. Sandbox Status (Progressive disclosure: ONLY if enabled/restricted)
 if [ "$SANDBOX" = "true" ]; then
   if [ "$SANDBOX_NET" = "true" ]; then
     BADGE_LIST+=("$(make_badge "${ICON_SANDBOX_NET}" "net-on" "${C_SUCCESS}")")
@@ -535,7 +574,7 @@ if [ "$SANDBOX" = "true" ]; then
   fi
 fi
 
-# 6. Quotas (Dual Gemini & Claude/3P trackers)
+# 7. Quotas (Dual Gemini & Claude/3P trackers)
 IS_GEMINI=false
 IS_CLAUDE=false
 case "$MODEL_ID" in
