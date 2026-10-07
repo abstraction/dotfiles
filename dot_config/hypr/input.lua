@@ -18,7 +18,7 @@ kb_options = "compose:ralt,shift:both_capslock_cancel",
 --     repeat_delay = 250,
 --
 --     -- Start with numlock on by default.
-numlock_by_default = true,
+numlock_by_default = false,
 --
 --     -- Increase sensitivity for mouse/trackpad (default: 0).
 --     sensitivity = 0.35,
