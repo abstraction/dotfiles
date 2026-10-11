@@ -24,6 +24,11 @@ alias ze='zeditor'
 
 export SSH_AUTH_SOCK=$HOME/.bitwarden-ssh-agent.sock
 
+# Enhanced Pager & Less configuration (ANSI, smartcase, status prompt)
+export PAGER="less"
+export LESS="-R -i -M -q"
+export LESSHISTFILE=-
+
 # Set up Atuin for magical shell history
 eval "$(atuin init bash)"
 
@@ -44,3 +49,7 @@ alias ssync="specstory sync --no-cloud-sync"
 # sagy() {
 #   specstory run --no-cloud-sync antigravity -c "agy --dangerously-skip-permissions $*"
 # }
+
+# Ghidra memory limits for 200MB+ binaries
+export GHIDRA_MAXMEM=8G
+export GHIDRA_HEADLESS_MAXMEM=8G

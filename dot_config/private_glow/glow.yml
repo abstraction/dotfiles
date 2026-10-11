@@ -1,0 +1,14 @@
+# Style name or JSON path (synced to current Omarchy theme)
+style: "/home/seren/.config/glow/omarchy.json"
+
+# Mouse support (set to false so terminal text selection and copy work natively)
+mouse: false
+
+# Use pager to display markdown
+pager: true
+
+# Word-wrap at width (0 dynamically sizes up to 120 columns based on terminal width)
+width: 0
+
+# Show all files, including hidden and ignored (TUI-mode only)
+all: false
